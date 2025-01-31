@@ -14,8 +14,10 @@ from pathlib import Path
 import os
 import dj_database_url
 import django_heroku
+from dotenv import load_dotenv 
 
 
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -60,7 +62,7 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],  # Add this line
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -87,9 +89,6 @@ DATABASES = {
         ssl_require=True  # Required for Heroku PostgreSQL
     )
 }
-
-options = DATABASES['default'].get('OPTIONS', {})
-options.pop('sslmode', None)
 
 
 # Password validation
@@ -130,7 +129,6 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
-STATIC_URL = 'static/'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field

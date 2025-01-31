@@ -13,9 +13,12 @@ class PastDisaster(models.Model):
     total_injured = models.IntegerField()
     total_affected = models.BigIntegerField()
     loss_inr = models.BigIntegerField()
+    id = models.AutoField(primary_key=True)
 
     class Meta:
         db_table = 'past_disasters'  # Use the same table name in the database
+        # not managed by django
+        managed = False
 
     def __str__(self):
         return f'{self.title} ({self.year})'
