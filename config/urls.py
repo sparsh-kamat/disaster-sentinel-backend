@@ -7,4 +7,5 @@ urlpatterns = [
     path('', welcome_view, name='welcome'),  # This will map the root URL to the welcome view
     path('auth/', include('users.urls')),  # Include URLs from the 'users' app (for signup, OTP verification, etc.)
     path('', include('past_disasters.urls')),  # Include URLs from the 'past_disasters' app (for the disaster API)
+    path('', include('agency.urls')),  # Include URLs from the 'agency' app (for the agency API)
 ]
