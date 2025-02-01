@@ -144,6 +144,7 @@ INSTALLED_APPS += [
     'whitenoise.runserver_nostatic',
     'users',
     'past_disasters',
+    'agency',
 ]
 
 MIDDLEWARE += [
