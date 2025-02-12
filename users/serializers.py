@@ -20,3 +20,15 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         if data.get('role') != 'agency' and data.get('agency_pan'):
             raise serializers.ValidationError("PAN number is only allowed for agency accounts")
         return data
+    
+class VerifyUserSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    otp = serializers.CharField()
+    
+    def validate(self, data):
+        email = data.get('email')
+        otp = data.get('otp')
+        if not email or not otp:
+            raise serializers.ValidationError("Email and OTP are required")
+        return data
+    

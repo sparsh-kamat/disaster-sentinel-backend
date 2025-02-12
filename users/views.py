@@ -7,7 +7,7 @@ from django.conf import settings
 import random
 from django.core.exceptions import ObjectDoesNotExist
 from .models import CustomUser
-from .serializers import UserRegistrationSerializer
+from .serializers import UserRegistrationSerializer , VerifyUserSerializer
 
 class RegisterView(APIView):
     def post(self, request):
@@ -59,15 +59,6 @@ class RegisterView(APIView):
         request.session[f'otp_{email}'] = str(otp)
         request.session.save()
         print(f"OTP for {email} stored in session: {request.session[f'otp_{email}']}")  # Debug: Log OTP stored
-        
-         # After saving OTP to session
-        request.session[f'otp_{email}'] = str(otp)
-        request.session.modified = True  # ← Ensure session is marked modified
-        print(f"Session ID: {request.session.session_key}")
-        print(f"Cookie Domain: {settings.SESSION_COOKIE_DOMAIN}")
-        print(f"Secure Flag: {settings.SESSION_COOKIE_SECURE}")
-        print(f"SameSite: {settings.SESSION_COOKIE_SAMESITE}")
-        
 
         try:
             send_mail(
@@ -86,57 +77,36 @@ class RegisterView(APIView):
 
 class VerifyOTPView(APIView):
     def post(self, request):
+        serializer = VerifyUserSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
-        email = request.data.get('email')
-        entered_otp = request.data.get('otp')
-
-        if not email or not entered_otp:
-            return Response({'error': 'Email and OTP are required'}, status=status.HTTP_400_BAD_REQUEST)
-
-        # In VerifyOTPView
-        print(f"Session Engine: {request.session.__class__.__module__}")
-        print(f"Session Store: {request.session.__class__.__name__}")
-        # print(f"Session ID: {request.session.session_key}")
-        #     print(f"Session Data: {request.session.items()}")  # Print all session data
-        #     print(f"Stored OTP for {email}: {request.session.get(email)}")
-        #     print(f"Provided OTP: {otp}")
-        # make debug statements like above 
-        print(f"Session ID: {request.session.session_key}")
-        print(f"Session data for {email}: {request.session.items()}")  # Log session contents
-        print(f"Entered OTP for {email}: {entered_otp}")  # Log the OTP entered by user
-        print(f"Stored OTP for {email}: {request.session.get(f'otp_{email}')}")  # Log the OTP retrieved from session
-        print(f"Email: {email}")  # Log the email entered by user
-            
-            
-        # Normalize email to avoid any discrepancies (spaces, case sensitivity)
-        email = email.strip().lower()
+        email = serializer.validated_data['email']
+        otp = serializer.validated_data['otp']
         
-        # Debug: Print session contents to ensure OTP is stored
-        print(f"Session data for {email}: {request.session.items()}")  # Log session contents
-
-        # Retrieve stored OTP from session
-        stored_otp = request.session.get(f'otp_{email}')
-        print(f"Stored OTP for {email}: {stored_otp}")  # Log the OTP retrieved from session
-
-
-        if not stored_otp:
-            return Response({'error': 'OTP expired or not found. Please register again.'}, 
-                            status=status.HTTP_400_BAD_REQUEST)
-
-        if entered_otp != stored_otp:
-            return Response({'error': 'Invalid OTP. Please try again.'}, status=status.HTTP_400_BAD_REQUEST)
-
+        # Debug: Log received email and OTP
+        print(f"Received email: {email}, OTP: {otp}")
+        
+        # Check if OTP is correct
+        session_otp = request.session.get(f'otp_{email}')
+        print(f"Session OTP for {email}: {session_otp}")  # Debug: Log session OTP
+        
+        if session_otp != otp:
+            return Response({'error': 'Invalid OTP'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Verify user
         try:
             user = CustomUser.objects.get(email=email)
-            user.is_verified = True  # Mark the user as verified
+            user.is_verified = True
             user.save()
-
-            # Remove OTP from session after successful verification
-            del request.session[f'otp_{email}']
-            request.session.save()
-
-            return Response({'message': 'OTP verified successfully. Account activated!'}, 
-                            status=status.HTTP_200_OK)
-
         except ObjectDoesNotExist:
-            return Response({'error': 'User not found. Please register again.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Clear OTP from session
+        del request.session[f'otp_{email}']
+        request.session.save()
+        
+        # Debug: Confirm OTP removal
+        print(f"OTP for {email} removed from session")
+        
+        return Response({'message': 'User verified successfully'}, status=status.HTTP_200_OK)
