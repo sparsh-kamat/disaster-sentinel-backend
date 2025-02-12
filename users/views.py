@@ -60,11 +60,13 @@ class RegisterView(APIView):
         request.session.save()
         print(f"OTP for {email} stored in session: {request.session[f'otp_{email}']}")  # Debug: Log OTP stored
         
-        # debug statements like above
-        print(f"Session data for {email}: {request.session.items()}")  # Log session contents
-        print(f"Stored OTP for {email}: {request.session.get(f'otp_{email}')}")
-        print(f"Email: {email}")
+         # After saving OTP to session
+        request.session[f'otp_{email}'] = str(otp)
+        request.session.modified = True  # ← Ensure session is marked modified
         print(f"Session ID: {request.session.session_key}")
+        print(f"Cookie Domain: {settings.SESSION_COOKIE_DOMAIN}")
+        print(f"Secure Flag: {settings.SESSION_COOKIE_SECURE}")
+        print(f"SameSite: {settings.SESSION_COOKIE_SAMESITE}")
         
 
         try:
@@ -83,12 +85,16 @@ class RegisterView(APIView):
         
 class VerifyOTPView(APIView):
     def post(self, request):
+        
         email = request.data.get('email')
         entered_otp = request.data.get('otp')
 
         if not email or not entered_otp:
             return Response({'error': 'Email and OTP are required'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # In VerifyOTPView
+        print(f"Session Engine: {request.session.__class__.__module__}")
+        print(f"Session Store: {request.session.__class__.__name__}")
         # print(f"Session ID: {request.session.session_key}")
         #     print(f"Session Data: {request.session.items()}")  # Print all session data
         #     print(f"Stored OTP for {email}: {request.session.get(email)}")
