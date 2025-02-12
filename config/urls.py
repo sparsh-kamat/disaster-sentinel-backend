@@ -8,4 +8,5 @@ urlpatterns = [
     path('auth/', include('users.urls')),  # Include URLs from the 'users' app (for signup, OTP verification, etc.)
     path('', include('past_disasters.urls')),  # Include URLs from the 'past_disasters' app (for the disaster API)
     path('', include('agency.urls')),  # Include URLs from the 'agency' app (for the agency API)
+    path('', include('floodprediction.urls')),  # Include URLs from the 'floodprediction' app
 ]
