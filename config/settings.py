@@ -150,12 +150,12 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # cors allow all
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_ALL_ORIGINS = True
+
 # cors allow all
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",  # React frontend
 ]
-
+CORS_ALLOW_ALL_ORIGINS = True
 
 
 # Static files (for WhiteNoise)
@@ -197,7 +197,7 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 #     SESSION_COOKIE_SAMESITE = 'None'
 
 # Force these settings regardless of DEBUG mode
-SESSION_COOKIE_SECURE = True  # Required for Heroku HTTPS
+SESSION_COOKIE_SECURE = False  # Required for Heroku HTTPS
 SESSION_COOKIE_SAMESITE = 'None'  # Allow cross-site cookies
 CSRF_COOKIE_SAMESITE = 'None'
-CSRF_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = False
