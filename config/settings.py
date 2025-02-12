@@ -49,7 +49,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django-cors-headers',
     'corsheaders',
     'sslserver',
     'rest_framework',
@@ -58,6 +57,7 @@ INSTALLED_APPS = [
     'users',
     'past_disasters',
     'agency',
+    'floodprediction',
 ]
 
 MIDDLEWARE = [
