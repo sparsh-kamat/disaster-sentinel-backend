@@ -20,6 +20,22 @@ class CustomUserManager(BaseUserManager):
         return self.create_user(email, password, **extra_fields)
     
 class CustomUser(AbstractUser):
+    # Add related_name to avoid clash with auth.User
+    groups = models.ManyToManyField(
+        'auth.Group',
+        related_name='custom_user_set',
+        blank=True,
+        verbose_name='groups',
+        help_text='The groups this user belongs to.',
+    )
+    user_permissions = models.ManyToManyField(
+        'auth.Permission',
+        related_name='custom_user_set',
+        blank=True,
+        verbose_name='user permissions',
+        help_text='Specific permissions for this user.',
+    )
+    
     ROLE_CHOICES = [
         ('user', 'User'),
         ('agency', 'Agency')
@@ -38,6 +54,7 @@ class CustomUser(AbstractUser):
     is_superuser = models.BooleanField(default=False)
     is_verified = models.BooleanField(default=False)
     date_joined = models.DateTimeField(auto_now_add=True)
+    id = models.AutoField(primary_key=True)
     
     #location fields , will be added by later not at registration
     
