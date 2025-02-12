@@ -156,6 +156,10 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",  # React frontend
 ]
 
+SESSION_COOKIE_SAMESITE = 'None'  # Required for cross-origin requests
+SESSION_COOKIE_SECURE = True  # Set to True in production if you're using HTTPS
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+
 
 
 

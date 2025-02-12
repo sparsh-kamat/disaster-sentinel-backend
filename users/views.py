@@ -60,6 +60,12 @@ class RegisterView(APIView):
         request.session.save()
         print(f"OTP for {email} stored in session: {request.session[f'otp_{email}']}")  # Debug: Log OTP stored
         
+        # debug statements like above
+        print(f"Session data for {email}: {request.session.items()}")  # Log session contents
+        print(f"Stored OTP for {email}: {request.session.get(f'otp_{email}')}")
+        print(f"Email: {email}")
+        print(f"Session ID: {request.session.session_key}")
+        
 
         try:
             send_mail(
@@ -83,6 +89,18 @@ class VerifyOTPView(APIView):
         if not email or not entered_otp:
             return Response({'error': 'Email and OTP are required'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # print(f"Session ID: {request.session.session_key}")
+        #     print(f"Session Data: {request.session.items()}")  # Print all session data
+        #     print(f"Stored OTP for {email}: {request.session.get(email)}")
+        #     print(f"Provided OTP: {otp}")
+        # make debug statements like above 
+        print(f"Session ID: {request.session.session_key}")
+        print(f"Session data for {email}: {request.session.items()}")  # Log session contents
+        print(f"Entered OTP for {email}: {entered_otp}")  # Log the OTP entered by user
+        print(f"Stored OTP for {email}: {request.session.get(f'otp_{email}')}")  # Log the OTP retrieved from session
+        print(f"Email: {email}")  # Log the email entered by user
+            
+            
         # Normalize email to avoid any discrepancies (spaces, case sensitivity)
         email = email.strip().lower()
         
