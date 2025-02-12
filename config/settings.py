@@ -35,6 +35,9 @@ DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'  # False in production
 
 ALLOWED_HOSTS = ['*']
 
+# cors allow all
+CORS_ALLOW_ALL_ORIGINS = True
+
 
 
 # Application definition
