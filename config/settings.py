@@ -35,9 +35,6 @@ DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'  # False in production
 
 ALLOWED_HOSTS = ['*']
 
-# cors allow all
-CORS_ALLOW_ALL_ORIGINS = True
-
 
 
 # Application definition
@@ -61,8 +58,8 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',  # ← Moved to the top
     'django.middleware.security.SecurityMiddleware',
-    'corsheaders.middleware.CorsMiddleware',  # ← Moved up here
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -153,6 +150,12 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # cors allow all
 CORS_ALLOW_ALL_ORIGINS = True
+# cors allow all
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",  # React frontend
+]
+
+
 
 
 # Static files (for WhiteNoise)
