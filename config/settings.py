@@ -35,8 +35,6 @@ DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'  # False in production
 
 ALLOWED_HOSTS = ['*']
 
-# cors allow all
-CORS_ALLOW_ALL_ORIGINS = True
 
 
 # Application definition
@@ -48,6 +46,15 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django-cors-headers',
+    'corsheaders',
+    'sslserver',
+    'rest_framework',
+    'rest_framework.authtoken',
+    'whitenoise.runserver_nostatic',
+    'users',
+    'past_disasters',
+    'agency',
 ]
 
 MIDDLEWARE = [
@@ -58,6 +65,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -138,23 +147,9 @@ USE_TZ = True
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# add corsheaders, sslserver , rest_framework to the INSTALLED_APPS
-INSTALLED_APPS += [
-    'corsheaders',
-    'sslserver',
-    'rest_framework',
-    'rest_framework.authtoken',
-    'whitenoise.runserver_nostatic',
-    'users',
-    'past_disasters',
-    'agency',
-]
 
-MIDDLEWARE += [
-    'corsheaders.middleware.CorsMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
-    
-]
+# cors allow all
+CORS_ALLOW_ALL_ORIGINS = True
 
 
 # Static files (for WhiteNoise)
