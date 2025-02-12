@@ -156,11 +156,6 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",  # React frontend
 ]
 
-SESSION_COOKIE_SAMESITE = 'None'  # Required for cross-origin requests
-SESSION_COOKIE_SECURE = True  # Set to True in production if you're using HTTPS
-SESSION_ENGINE = 'django.contrib.sessions.backends.db'
-
-
 
 
 # Static files (for WhiteNoise)
@@ -186,3 +181,10 @@ if not DEBUG:
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+    
+if DEBUG:
+    SECURE_SSL_REDIRECT = False
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
+    SECURE_HSTS_SECONDS = 0
+    SESSION_COOKIE_SAMESITE = 'Lax'
