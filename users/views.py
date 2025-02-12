@@ -58,6 +58,8 @@ class RegisterView(APIView):
         otp = random.randint(100000, 999999)
         request.session[f'otp_{email}'] = str(otp)
         request.session.save()
+        print(f"OTP for {email} stored in session: {request.session[f'otp_{email}']}")  # Debug: Log OTP stored
+        
 
         try:
             send_mail(
@@ -81,8 +83,16 @@ class VerifyOTPView(APIView):
         if not email or not entered_otp:
             return Response({'error': 'Email and OTP are required'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Normalize email to avoid any discrepancies (spaces, case sensitivity)
+        email = email.strip().lower()
+        
+        # Debug: Print session contents to ensure OTP is stored
+        print(f"Session data for {email}: {request.session.items()}")  # Log session contents
+
         # Retrieve stored OTP from session
         stored_otp = request.session.get(f'otp_{email}')
+        print(f"Stored OTP for {email}: {stored_otp}")  # Log the OTP retrieved from session
+
 
         if not stored_otp:
             return Response({'error': 'OTP expired or not found. Please register again.'}, 
