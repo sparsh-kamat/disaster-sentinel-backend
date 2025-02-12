@@ -8,6 +8,7 @@ import random
 from django.core.exceptions import ObjectDoesNotExist
 from .models import CustomUser
 from .serializers import UserRegistrationSerializer
+from django.views.decorators.csrf import csrf_exempt
 
 class RegisterView(APIView):
     def post(self, request):
@@ -82,7 +83,8 @@ class RegisterView(APIView):
 
         return Response({'message': 'User created successfully. OTP sent to email.'}, 
                         status=status.HTTP_201_CREATED)
-        
+
+@csrf_exempt        
 class VerifyOTPView(APIView):
     def post(self, request):
         
