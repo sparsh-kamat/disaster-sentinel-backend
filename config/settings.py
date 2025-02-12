@@ -177,14 +177,27 @@ django_heroku.settings(locals())
 options = DATABASES['default'].get('OPTIONS', {})
 options.pop('sslmode', None)
 
-if not DEBUG:
-    SECURE_SSL_REDIRECT = True
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
+# Configure domain for cookies
+SESSION_COOKIE_DOMAIN = '.herokuapp.com'  # Allows subdomains
+CSRF_COOKIE_DOMAIN = '.herokuapp.com'
+
+# Trust Heroku's proxy headers
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# if not DEBUG:
+#     SECURE_SSL_REDIRECT = True
+#     SESSION_COOKIE_SECURE = True
+#     CSRF_COOKIE_SECURE = True
     
-if DEBUG:
-    SECURE_SSL_REDIRECT = False
-    SESSION_COOKIE_SECURE = False
-    CSRF_COOKIE_SECURE = False
-    SECURE_HSTS_SECONDS = 0
-    SESSION_COOKIE_SAMESITE = 'Lax'
+# if DEBUG:
+#     SECURE_SSL_REDIRECT = False
+#     SESSION_COOKIE_SECURE = False
+#     CSRF_COOKIE_SECURE = False
+#     CSRF_COOKIE_SAMESITE = 'None'
+#     SESSION_COOKIE_SAMESITE = 'None'
+
+# Force these settings regardless of DEBUG mode
+SESSION_COOKIE_SECURE = True  # Required for Heroku HTTPS
+SESSION_COOKIE_SAMESITE = 'None'  # Allow cross-site cookies
+CSRF_COOKIE_SAMESITE = 'None'
+CSRF_COOKIE_SECURE = True
