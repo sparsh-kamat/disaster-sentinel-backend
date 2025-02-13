@@ -10,12 +10,6 @@ from .models import CustomUser
 from .serializers import UserRegistrationSerializer , VerifyUserSerializer
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from django.middleware.csrf import get_token
-
-class GetCSRFToken(APIView):
-    def get(self, request):
-        csrf_token = get_token(request)
-        return Response({'csrfToken': csrf_token})
     
 class RegisterView(APIView):
     def post(self, request):
@@ -68,6 +62,14 @@ class RegisterView(APIView):
         request.session.save()
         print(f"OTP for {email} stored in session: {request.session[f'otp_{email}']}")  # Debug: Log OTP stored
 
+        # session info
+        print(request.session.items())
+        print(f"Session ID: {request.session.session_key}")
+        print(f"Session expiry age: {request.session.get_expiry_age()}")
+        print(f"Session expiry date: {request.session.get_expiry_date()}")
+        print(f"Session modified: {request.session.modified}")
+        print(f"Session has been modified at: {request.session.get('_session_expiry_age', 'N/A')}")
+        
         try:
             send_mail(
                 'Disaster Sentinel - Account Verification',
@@ -94,6 +96,8 @@ class VerifyOTPView(APIView):
         
         # Debug: Log received email and OTP
         print(f"Received email: {email}, OTP: {otp}")
+        print(f"Session ID: {request.session.session_key}")
+        
         
         # Check if OTP is correct
         session_otp = request.session.get(f'otp_{email}')
