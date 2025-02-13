@@ -94,27 +94,20 @@ class VerifyOTPView(APIView):
         email = serializer.validated_data['email']
         otp = serializer.validated_data['otp']
         
-        # Debug: Log received email and OTP
-        print(f"Received email: {email}, OTP: {otp}")
         print(f"Session ID: {request.session.session_key}")
+        print(f"Session Data: {request.session.items()}")  # Print all session data
+        print(f"Stored OTP for {email}: {request.session.get(email)}")
+        print(f"Provided OTP: {otp}")
         
-        
-        # Check if OTP is correct
-        session_otp = request.session.get(f'otp_{email}')
-        print(f"Session OTP for {email}: {session_otp}")  # Debug: Log session OTP
-        
-        if session_otp != otp:
-            return Response({'error': 'Invalid OTP'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Verify user
-        try:
+        # Verify OTP
+        if request.session.get(f'otp_{email}') == str(otp): 
             user = CustomUser.objects.get(email=email)
             user.is_verified = True
             user.save()
-        except ObjectDoesNotExist:
-            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        else:
+            return Response({'error': 'Invalid OTP'}, status=status.HTTP_400_BAD_REQUEST)
         
-        # Clear OTP from session
+        # Remove OTP from session
         del request.session[f'otp_{email}']
         request.session.save()
         
