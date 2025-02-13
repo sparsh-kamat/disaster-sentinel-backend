@@ -148,15 +148,35 @@ options = DATABASES['default'].get('OPTIONS', {})
 options.pop('sslmode', None)
 
 # Security settings for production
-if not DEBUG:
-    SECURE_SSL_REDIRECT = True
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
+# if not DEBUG:
+#     SECURE_SSL_REDIRECT = True
+#     SESSION_COOKIE_SECURE = True
+#     CSRF_COOKIE_SECURE = True
 
-# Settings for development
-if DEBUG:
-    SESSION_COOKIE_SAMESITE = 'None'  # Required for cross-origin requests
-    SESSION_COOKIE_SECURE = False      # Required when using HTTPS
+# # Settings for development
+# if DEBUG:
+#     SESSION_COOKIE_SAMESITE = 'None'  # Required for cross-origin requests
+#     SESSION_COOKIE_SECURE = False      # Required when using HTTPS
 
+CORS_ALLOWED_ORIGINS = [
+    "http://*",
+    "https://*",]
+
+CORS_ORIGIN_WHITELIST = [
+    "http://*",
+    "https://*",]
+
+CSRF_TRUSTED_ORIGINS = [
+        "http://*",
+        "https://*",]
+
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS = True
+SESSION_COOKIE_SAMESITE = 'None'
+SESSION_COOKIE_SECURE = True
+ 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# allow http cookies 
+
