@@ -8,7 +8,15 @@ import random
 from django.core.exceptions import ObjectDoesNotExist
 from .models import CustomUser
 from .serializers import UserRegistrationSerializer , VerifyUserSerializer
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from django.middleware.csrf import get_token
 
+class GetCSRFToken(APIView):
+    def get(self, request):
+        csrf_token = get_token(request)
+        return Response({'csrfToken': csrf_token})
+    
 class RegisterView(APIView):
     def post(self, request):
         serializer = UserRegistrationSerializer(data=request.data)
