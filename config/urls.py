@@ -1,6 +1,5 @@
 from django.contrib import admin
 from django.urls import path, include  # Import include
-from users.views import GetCSRFToken
 from .views import welcome_view  # Import the welcome_view
 
 urlpatterns = [
