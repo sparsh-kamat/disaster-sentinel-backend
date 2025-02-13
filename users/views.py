@@ -10,13 +10,7 @@ from .models import CustomUser
 from .serializers import UserRegistrationSerializer , VerifyUserSerializer
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from django.middleware.csrf import get_token
 
-class GetCSRFToken(APIView):
-    def get(self, request):
-        csrf_token = get_token(request)
-        return Response({'csrfToken': csrf_token})
-    
 class RegisterView(APIView):
     def post(self, request):
         serializer = UserRegistrationSerializer(data=request.data)
@@ -37,6 +31,7 @@ class RegisterView(APIView):
             otp = random.randint(100000, 999999)
             request.session[f'otp_{email}'] = str(otp)
             request.session.save()
+            print(f"OTP for {email} stored in session: {request.session[f'otp_{email}']}")  # Debug: Log OTP stored
 
             try:
                 send_mail(
@@ -86,6 +81,11 @@ class RegisterView(APIView):
 class VerifyOTPView(APIView):
     def post(self, request):
         serializer = VerifyUserSerializer(data=request.data)
+        # log the request data
+        print(request.data)
+        # log session data
+        print(request.session)
+        
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
