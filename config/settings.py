@@ -155,6 +155,8 @@ options.pop('sslmode', None)
 SESSION_COOKIE_SECURE = True
 # Same Site Cookie
 SESSION_COOKIE_SAMESITE = 'None'
+CSRF_COOKIE_SECURE = True
+CSRF_COOKIE_SAMESITE = 'None'
 # settings.py
 
 # Default primary key field type
