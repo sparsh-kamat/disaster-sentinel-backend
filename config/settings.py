@@ -129,9 +129,16 @@ STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# CORS settings
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:5174",
+    "http://localhost:8000",
+    "http://localhost:8080",
+    "http://localhost:5173",
+]
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_ALL_ORIGINS = True
+
+
 
 # Email Configuration
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -148,34 +155,18 @@ options = DATABASES['default'].get('OPTIONS', {})
 options.pop('sslmode', None)
 
 # Security settings for production
-# if not DEBUG:
-#     SECURE_SSL_REDIRECT = True
-#     SESSION_COOKIE_SECURE = True
-#     CSRF_COOKIE_SECURE = True
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 
-# # Settings for development
-# if DEBUG:
-#     SESSION_COOKIE_SAMESITE = 'None'  # Required for cross-origin requests
-#     SESSION_COOKIE_SECURE = False      # Required when using HTTPS
+# Settings for development
+if DEBUG:
+    SESSION_COOKIE_SAMESITE = 'None'  # Required for cross-origin requests
+    SESSION_COOKIE_SECURE = False      # Required when using HTTPS
 
-CORS_ALLOWED_ORIGINS = [
-    "http://*",
-    "https://*",]
 
-CORS_ORIGIN_WHITELIST = [
-    "http://*",
-    "https://*",]
 
-CSRF_TRUSTED_ORIGINS = [
-        "http://*",
-        "https://*",]
-
-CORS_ALLOW_ALL_ORIGINS = True
-CORS_ALLOW_CREDENTIALS = True
-SESSION_COOKIE_SAMESITE = 'None'
-SESSION_COOKIE_SECURE = False
-CSRF_COOKIE_SAMESITE = 'None'
-CSRF_COOKIE_SECURE = False
  
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
