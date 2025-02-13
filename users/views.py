@@ -81,10 +81,6 @@ class RegisterView(APIView):
 class VerifyOTPView(APIView):
     def post(self, request):
         serializer = VerifyUserSerializer(data=request.data)
-        # log the request data
-        print(request.data)
-        # log session data
-        print(request.session)
         
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -98,6 +94,8 @@ class VerifyOTPView(APIView):
         # Check if OTP is correct
         session_otp = request.session.get(f'otp_{email}')
         print(f"Session OTP for {email}: {session_otp}")  # Debug: Log session OTP
+        print(f"Session data: {request.session}")  # Debug: Log session data
+        # id session
         
         if session_otp != otp:
             return Response({'error': 'Invalid OTP'}, status=status.HTTP_400_BAD_REQUEST)
