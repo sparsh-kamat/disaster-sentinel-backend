@@ -29,10 +29,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY', 'fallback-key-for-local-dev')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'  # False in production
+# DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'  # False in production
+DEBUG = True
 
 # Allow all hosts
 ALLOWED_HOSTS = ['*']
+
+# make sure requests from http are allowed
+CORS_ALLOW_ALL_ORIGINS = True
+
 
 # Application definition
 INSTALLED_APPS = [
@@ -127,9 +132,6 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 # CORS settings
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_ALL_ORIGINS = True
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",  # React frontend
-]
 
 # Email Configuration
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -154,7 +156,7 @@ if not DEBUG:
 # Settings for development
 if DEBUG:
     SESSION_COOKIE_SAMESITE = 'None'  # Required for cross-origin requests
-    SESSION_COOKIE_SECURE = True      # Required when using HTTPS
+    SESSION_COOKIE_SECURE = False      # Required when using HTTPS
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
