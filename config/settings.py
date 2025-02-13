@@ -148,11 +148,12 @@ options = DATABASES['default'].get('OPTIONS', {})
 options.pop('sslmode', None)
 
 # Security settings for production
-if not DEBUG:
-    SECURE_SSL_REDIRECT = True
+# if not DEBUG:
+    # SECURE_SSL_REDIRECT = True
     # SESSION_COOKIE_SECURE = True
     # CSRF_COOKIE_SECURE = True
 
+SECURE_SSL_REDIRECT = False
 SESSION_COOKIE_SECURE = False
 # settings.py
 
