@@ -150,8 +150,13 @@ options.pop('sslmode', None)
 # Security settings for production
 if not DEBUG:
     SECURE_SSL_REDIRECT = True
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
+    # SESSION_COOKIE_SECURE = True
+    # CSRF_COOKIE_SECURE = True
+
+SESSION_COOKIE_SECURE = False
+# settings.py
+SESSION_COOKIE_SAMESITE = 'None'  # Crucial for cross-origin cookies
+CSRF_COOKIE_SAMESITE = 'None'  # Crucial for cross-origin
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
