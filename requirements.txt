@@ -32,3 +32,4 @@ tzdata==2025.1
 urllib3==2.3.0
 websockets==14.2
 whitenoise==6.8.2
+Pillow
