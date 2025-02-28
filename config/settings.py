@@ -35,19 +35,18 @@ DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'  # False in production
 # Allow all hosts
 ALLOWED_HOSTS = ['*']
 
-# make sure requests from http are allowed
-CORS_ALLOW_ALL_ORIGINS = True
 
 
 # Application definition
 INSTALLED_APPS = [
+    'corsheaders',  # CORS app
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'corsheaders',
+    
     'sslserver',
     'rest_framework',
     'rest_framework.authtoken',
@@ -60,9 +59,9 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',  # CORS middleware
+    'django.middleware.common.CommonMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -157,28 +156,34 @@ options = DATABASES['default'].get('OPTIONS', {})
 options.pop('sslmode', None)
 
 # Security settings for production
-if not DEBUG:
-    SECURE_SSL_REDIRECT = True
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
-    
-    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-    SECURE_HSTS_SECONDS = 31536000  # 1 year
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    SECURE_HSTS_PRELOAD = True
-    SECURE_CONTENT_TYPE_NOSNIFF = True
-    SECURE_BROWSER_XSS_FILTER = True
-    X_FRAME_OPTIONS = 'DENY'
-    
-    # Allow all hosts
-    ALLOWED_HOSTS = ['*']
-     
-    # make sure requests from http are allowed
-    CORS_ALLOW_ALL_ORIGINS = True
-    
+# if not DEBUG:
+#     SECURE_SSL_REDIRECT = True
+#     SESSION_COOKIE_SECURE = True
+#     CSRF_COOKIE_SECURE = True
 
+# # Settings for development
+# if DEBUG:
+#     SESSION_COOKIE_SAMESITE = 'None'  # Required for cross-origin requests
+#     SESSION_COOKIE_SECURE = False      # Required when using HTTPS
 
+CORS_ALLOWED_ORIGINS = [
+    "http://*",
+    "https://*",]
 
+CORS_ORIGIN_WHITELIST = [
+    "http://*",
+    "https://*",]
+
+CSRF_TRUSTED_ORIGINS = [
+        "http://*",
+        "https://*",]
+
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+SESSION_COOKIE_SAMESITE = 'None'
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SAMESITE = 'None'
+CSRF_COOKIE_SECURE = True
  
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
