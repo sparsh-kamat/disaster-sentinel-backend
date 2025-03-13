@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'past_disasters',
     'agency',
     'floodprediction',
+    'floodstations',
 ]
 
 MIDDLEWARE = [

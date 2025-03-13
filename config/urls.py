@@ -9,4 +9,5 @@ urlpatterns = [
     path('', include('past_disasters.urls')),  # Include URLs from the 'past_disasters' app (for the disaster API)
     path('', include('agency.urls')),  # Include URLs from the 'agency' app (for the agency API)
     path('', include('floodprediction.urls')),  # Include URLs from the 'floodprediction' app
+    path('api/', include('floodstations.urls')),  # Include URLs from the 'floodstations' app
 ]
