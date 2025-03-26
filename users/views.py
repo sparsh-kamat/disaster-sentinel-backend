@@ -144,9 +144,9 @@ class RegisterView(APIView):
             
             # If user is not verified, resend OTP instead of creating a new account
             otp = random.randint(100000, 999999)
-            request.session[f'otp_{email}'] = str(otp)
-            request.session.save()
-            print(f"OTP for {email} stored in session: {request.session[f'otp_{email}']}")  # Debug: Log OTP stored
+            # request.session[f'otp_{email}'] = str(otp)
+            # request.session.save()
+            # print(f"OTP for {email} stored in session: {request.session[f'otp_{email}']}")  # Debug: Log OTP stored
 
             # store in cache too
             cache.set(f'otp_{email}', str(otp), timeout=300)
@@ -178,17 +178,20 @@ class RegisterView(APIView):
 
         # Generate OTP and send email
         otp = random.randint(100000, 999999)
-        request.session[f'otp_{email}'] = str(otp)
-        request.session.save()
-        print(f"OTP for {email} stored in session: {request.session[f'otp_{email}']}")  # Debug: Log OTP stored
-
+        # request.session[f'otp_{email}'] = str(otp)
+        # request.session.save()
+        # print(f"OTP for {email} stored in session: {request.session[f'otp_{email}']}")  # Debug: Log OTP stored
+        cache.set(f'otp_{email}', str(otp), timeout=300)
+        print(f"OTP for {email} stored in cache: {cache.get(f'otp_{email}')}")
+            
         # session info
-        print(request.session.items())
-        print(f"Session ID: {request.session.session_key}")
-        print(f"Session expiry age: {request.session.get_expiry_age()}")
-        print(f"Session expiry date: {request.session.get_expiry_date()}")
-        print(f"Session modified: {request.session.modified}")
-        print(f"Session has been modified at: {request.session.get('_session_expiry_age', 'N/A')}")
+        # print(request.session.items())
+        # print(f"Session ID: {request.session.session_key}")
+        # print(f"Session expiry age: {request.session.get_expiry_age()}")
+        # print(f"Session expiry date: {request.session.get_expiry_date()}")
+        # print(f"Session modified: {request.session.modified}")
+        # print(f"Session has been modified at: {request.session.get('_session_expiry_age', 'N/A')}")
+        
         
         try:
             send_mail(
@@ -215,24 +218,15 @@ class VerifyOTPView(APIView):
         email = serializer.validated_data['email']
         otp = serializer.validated_data['otp']
         
-        print(f"Session ID: {request.session.session_key}")
-        print(f"Session Data: {request.session.items()}")  # Print all session data
-        print(f"Stored OTP for {email}: {request.session.get(email)}")
-        print(f"Provided OTP: {otp}")
+        # Debug cache directly
+        cached_otp = cache.get(f'otp_{email}')
+        print(f"Cache lookup for {email}: {cached_otp}")  # Add this line
         
-        # Verify OTP cache
-        if  cache.get(f'otp_{email}') == otp:
+        if cached_otp and cached_otp == str(otp):
             user = CustomUser.objects.get(email=email)
             user.is_verified = True
             user.save()
-        else:
-            return Response({'error': 'Invalid OTP'}, status=status.HTTP_400_BAD_REQUEST)
+            cache.delete(f'otp_{email}')
+            return Response({'message': 'User verified successfully'}, status=status.HTTP_200_OK)
         
-        # Remove OTP from session
-        del request.session[f'otp_{email}']
-        request.session.save()
-        
-        # Debug: Confirm OTP removal
-        print(f"OTP for {email} removed from session")
-        
-        return Response({'message': 'User verified successfully'}, status=status.HTTP_200_OK)
+        return Response({'error': 'Invalid OTP'}, status=status.HTTP_400_BAD_REQUEST)
