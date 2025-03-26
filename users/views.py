@@ -16,6 +16,7 @@ from .serializers import LoginSerializer , ResetPasswordSerializer
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode , urlsafe_base64_decode
+from django.core.cache import cache
 
 
 class PasswordResetTokenGenerator(PasswordResetTokenGenerator):
@@ -147,6 +148,10 @@ class RegisterView(APIView):
             request.session.save()
             print(f"OTP for {email} stored in session: {request.session[f'otp_{email}']}")  # Debug: Log OTP stored
 
+            # store in cache too
+            cache.set(f'otp_{email}', str(otp), timeout=300)
+            print(f"OTP for {email} stored in cache: {cache.get(f'otp_{email}')}")
+            
             try:
                 send_mail(
                     'Disaster Sentinel - Account Verification (Resent)',
@@ -215,8 +220,8 @@ class VerifyOTPView(APIView):
         print(f"Stored OTP for {email}: {request.session.get(email)}")
         print(f"Provided OTP: {otp}")
         
-        # Verify OTP
-        if request.session.get(f'otp_{email}') == str(otp): 
+        # Verify OTP cache
+        if  cache.get(f'otp_{email}') == otp:
             user = CustomUser.objects.get(email=email)
             user.is_verified = True
             user.save()
