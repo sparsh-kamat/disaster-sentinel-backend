@@ -22,7 +22,7 @@ class FloodInformation(models.Model):
 
 
 class StationInformation(models.Model):
-    gaugeid = models.IntegerField()
+    gaugeid = models.IntegerField(primary_key=True)
     indofloods_gid = models.IntegerField()
     station_name = models.TextField()
     river_basin = models.TextField()
