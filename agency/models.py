@@ -3,18 +3,7 @@ from django.db import models
 from django.contrib.auth import get_user_model
 from django.core.validators import FileExtensionValidator
 
-# Create your models here.
-# i have already created and populated the table like the follow :
-# CREATE TABLE IF NOT EXISTS "agency_details" (
-#     "id" INT PRIMARY KEY,
-#     "name" TEXT,
-#     "address" TEXT,
-#     "state" TEXT,
-#     "district" TEXT,
-#     "email" TEXT,
-#     "phone" TEXT,
-#     "category" TEXT
-# );
+
 
 class ExistingAgencies(models.Model):
     id = models.AutoField(primary_key=True)
