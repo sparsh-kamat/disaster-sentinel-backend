@@ -22,24 +22,21 @@ class FloodInformation(models.Model):
 
 
 class StationInformation(models.Model):
-    gaugeid = models.IntegerField(primary_key=True)
-    warning_level = models.DecimalField(max_digits=18, decimal_places=14)
-    danger_level = models.DecimalField(max_digits=7, decimal_places=3)
-    station = models.TextField()
-    latitude = models.DecimalField(max_digits=6, decimal_places=4)
+    gaugeid = models.IntegerField()
+    indofloods_gid = models.IntegerField()
+    station_name = models.TextField()
+    river_basin = models.TextField()
+    group = models.TextField()
     longitude = models.DecimalField(max_digits=6, decimal_places=4)
+    latitude = models.DecimalField(max_digits=6, decimal_places=4)
+    warning_level = models.DecimalField(max_digits=17, decimal_places=14)
+    danger_level = models.DecimalField(max_digits=6, decimal_places=3, null=True, blank=True)
     river_name_tributory_subtributory = models.TextField()
-    basin = models.TextField()
     state = models.TextField()
-    start_date = models.DateTimeField()
-    end_date = models.DateTimeField()
-    level_entries = models.IntegerField()
-    streamflow_entries = models.IntegerField()
-    privacy = models.TextField()
-    source_catchment_area = models.DecimalField(max_digits=8, decimal_places=2)
-    catchment_area = models.DecimalField(max_digits=20, decimal_places=14)
-    area_variation = models.DecimalField(max_digits=19, decimal_places=16)
     reliability = models.TextField()
+    num_floods = models.IntegerField()
+    flood_months = models.TextField()  # Could be JSONField if using PostgreSQL
+    flow_availability = models.DecimalField(max_digits=4, decimal_places=2)
 
     class Meta:
         managed = False
