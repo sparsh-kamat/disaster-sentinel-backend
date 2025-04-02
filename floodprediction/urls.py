@@ -1,7 +1,7 @@
 from django.urls import path
 from .views import DisasterSummaryAPIView
 from .views import DisasterImagesAPIView
-# from .views import FloodPredictionView
+from .views import FloodPredictionView
 
 urlpatterns = [
     path('api/disaster-summary/', DisasterSummaryAPIView.as_view(), name='disaster_summary'),
