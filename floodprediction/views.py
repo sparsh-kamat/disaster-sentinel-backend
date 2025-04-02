@@ -7,19 +7,19 @@ from .scrape_images import get_disaster_images
 from .predict_flood import FloodPredictor
 
 
-# class FloodPredictionView(APIView):
-#     def post(self, request):
-#         # Load model and make prediction
-#         predictor = FloodPredictor()
+class FloodPredictionView(APIView):
+    def post(self, request):
+        # Load model and make prediction
+        predictor = FloodPredictor()
 
-#         # Check for input data
-#         input_data = request.data
-#         prediction = predictor.predict(input_data)
+        # Check for input data
+        input_data = request.data
+        prediction = predictor.predict(input_data)
 
-#         # Return response
-#         if 'error' in prediction:
-#             return Response(prediction, status=status.HTTP_400_BAD_REQUEST)
-#         return Response(prediction, status=status.HTTP_200_OK)
+        # Return response
+        if 'error' in prediction:
+            return Response(prediction, status=status.HTTP_400_BAD_REQUEST)
+        return Response(prediction, status=status.HTTP_200_OK)
     
 class DisasterSummaryAPIView(APIView):
     def post(self, request, format=None):
