@@ -67,6 +67,7 @@ class DisasterImagesAPIView(APIView):
             'total_injured',
             'total_affected',
             'disaster_state',
+            'disaster_title',
         ]
         missing = [field for field in required_fields if field not in data]
         if missing:
@@ -76,7 +77,7 @@ class DisasterImagesAPIView(APIView):
             )
 
         try:
-            query = f"{data['disaster_type']} disaster in {data['location']}, {data['disaster_state']}  during {data['month_occurred']} {data['disaster_date']} - destruction, damage, rescue operations, and aftermath"
+            query = f"{data['disaster_title']} in {data['disaster_location']}, {data['disaster_state']}  during {data['month_occurred']} {data['disaster_date']}"
             summary = get_disaster_images(
                 query= query , num_images= 10
             )
