@@ -76,7 +76,7 @@ class DisasterImagesAPIView(APIView):
             )
 
         try:
-            query = f"{data['disaster_type']} disaster in {data['location']}, {data['disaster_state']}  during {data['month_occurred']} {data['disaster_date']} - destruction, damage, rescue operations, and aftermath"
+            query = f"{data['disaster_type']} disaster in {data['disaster_location']}, {data['disaster_state']}  during {data['month_occurred']} {data['disaster_date']} - destruction, damage, rescue operations, and aftermath"
             summary = get_disaster_images(
                 query= query , num_images= 10
             )
