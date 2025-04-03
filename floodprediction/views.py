@@ -49,7 +49,8 @@ class DisasterImagesAPIView(APIView):
             'disaster_type',
             'total_deaths',
             'total_injured',
-            'total_affected'
+            'total_affected',
+            'state'
         ]
         missing = [field for field in required_fields if field not in data]
         if missing:
