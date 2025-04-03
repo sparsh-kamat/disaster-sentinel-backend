@@ -39,7 +39,7 @@ DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 SECRET_KEY = os.environ.get('SECRET_KEY', 'fallback-key-for-local-dev')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'  # False in production
+DEBUG = True
 
 
 # Allow all hosts
