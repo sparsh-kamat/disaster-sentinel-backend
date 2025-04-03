@@ -1,19 +1,14 @@
+# agency/urls.py
 from django.urls import path, include
-from rest_framework import routers, serializers, viewsets
-from .models import ExistingAgencies
-from .serializers import ExistingAgenciesSerializer
-from .views import ExistingAgenciesListView
 from rest_framework.routers import DefaultRouter
+from .views import EventViewSet, ExistingAgenciesListView
 
-from .views import EventViewSet
-# Create a router and register our viewset with it.
+# Create a router and register the EventViewSet with it
 router = DefaultRouter()
 router.register(r'events', EventViewSet)
 
-
-# Additionally, we include login URLs for the browsable API.
+# Define the URL patterns for your agency app
 urlpatterns = [
-    path('agency/', ExistingAgenciesListView.as_view(), name='existing_agencies_list'),
-    path('', include(router.urls)),
-    
+    path('existing-agencies/', ExistingAgenciesListView.as_view(), name='existing_agencies_list'),
+    path('', include(router.urls)),  # This will route '/events/'
 ]
