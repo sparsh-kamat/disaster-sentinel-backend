@@ -20,4 +20,12 @@ def get_disaster_images(query, num_images=10):
     results = search.get_dict()
 
     image_urls = [img["original"] for img in results.get("images_results", [])[:num_images]]
+
     return image_urls
+
+
+if __name__ == "__main__":
+    disaster_type = 'storm' ; location = 'chennai' ; state = 'tamil nadu' ; month = 'december' ; year = '2023'
+    prompt = f"{disaster_type} disaster in {location}, {state}  during {month} {year} - destruction, damage, rescue operations, and aftermath"
+    images = get_disaster_images(prompt)
+    print(images)
