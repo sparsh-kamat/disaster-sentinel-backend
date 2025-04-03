@@ -5,6 +5,24 @@ from rest_framework import filters
 
 from rest_framework import generics
 
+from rest_framework import viewsets
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from .models import Event
+from .serializers import EventSerializer
+
+class EventViewSet(viewsets.ModelViewSet):
+    queryset = Event.objects.all()
+    serializer_class = EventSerializer
+
+    @action(detail=True, methods=['post'])
+    def add_timeline(self, request, pk=None):
+        event = self.get_object()
+        timeline_items_data = request.data.get('timeline_items', [])
+        for item_data in timeline_items_data:
+            event.timeline_items.create(**item_data)
+        return Response({'status': 'Timeline items added'})
+    
 class ExistingAgenciesListView(generics.ListAPIView):
     queryset = ExistingAgencies.objects.all()
     serializer_class = ExistingAgenciesSerializer

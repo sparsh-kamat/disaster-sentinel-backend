@@ -6,6 +6,48 @@ import cloudinary
 import cloudinary.uploader
 from cloudinary.models import CloudinaryField
 
+class Event(models.Model):
+    EVENT_TYPE_CHOICES = [
+        ("Conference", "Conference"),
+        ("Workshop", "Workshop"),
+        ("Seminar", "Seminar"),
+        ("Webinar", "Webinar"),
+        ("Networking", "Networking"),
+        ("Other", "Other"),
+    ]
+
+    REG_TYPE_CHOICES = [
+        ("Free", "Free"),
+        ("Paid", "Paid"),
+    ]
+
+    name = models.CharField(max_length=255)
+    date = models.DateField()
+    start_time = models.TimeField()
+    event_type = models.CharField(max_length=50, choices=EVENT_TYPE_CHOICES)
+    platform = models.CharField(max_length=100, null=True, blank=True)
+    meeting_link = models.URLField(null=True, blank=True)
+    meeting_id = models.CharField(max_length=100, null=True, blank=True)
+    venue_name = models.CharField(max_length=255, null=True, blank=True)
+    address = models.CharField(max_length=255, null=True, blank=True)
+    city = models.CharField(max_length=100, null=True, blank=True)
+    state = models.CharField(max_length=100, null=True, blank=True)
+    attendees = models.IntegerField(null=True, blank=True)
+    reg_type = models.CharField(max_length=50, choices=REG_TYPE_CHOICES)
+    description = models.TextField(null=True, blank=True)
+    tags = models.JSONField(default=list)
+    location_type = models.CharField(max_length=10, choices=[("online", "Online"), ("offline", "Offline")], default="online")
+    
+    def __str__(self):
+        return self.name
+
+class TimelineItem(models.Model):
+    event = models.ForeignKey(Event, related_name="timeline_items", on_delete=models.CASCADE)
+    time = models.TimeField()
+    activity = models.CharField(max_length=255)
+
+    def __str__(self):
+        return f"{self.time} - {self.activity}"
 
 class ExistingAgencies(models.Model):
     id = models.AutoField(primary_key=True)
