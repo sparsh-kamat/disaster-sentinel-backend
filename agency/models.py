@@ -24,9 +24,9 @@ class Event(models.Model):
         ("Free", "Free"),
         ("Paid", "Paid"),
     ]
- # ForeignKey to the CustomUser model (instead of User)
-     # Explicitly use user_id to refer to the user who created the event
-    user_id = models.ForeignKey(User, on_delete=models.CASCADE, related_name='events', to_field='id', db_column='user_id')  # Link to the user who created the event
+
+    # ForeignKey to the User model (user_id in the event)
+    user_id = models.ForeignKey(User, on_delete=models.CASCADE, related_name='events', to_field='id', db_column='user_id')
 
     name = models.CharField(max_length=255)
     date = models.DateField()
@@ -44,17 +44,12 @@ class Event(models.Model):
     description = models.TextField(null=True, blank=True)
     tags = models.JSONField(default=list)
     location_type = models.CharField(max_length=10, choices=[("online", "Online"), ("offline", "Offline")], default="online")
+
+    # Store the timeline items as a JSON field
+    timeline_items = models.JSONField(default=list, blank=True)  # Default empty list if no timeline items are provided
     
     def __str__(self):
         return self.name
-
-class TimelineItem(models.Model):
-    event = models.ForeignKey(Event, related_name="timeline_items", on_delete=models.CASCADE)
-    time = models.TimeField()
-    activity = models.CharField(max_length=255)
-
-    def __str__(self):
-        return f"{self.time} - {self.activity}"
 
 class ExistingAgencies(models.Model):
     id = models.AutoField(primary_key=True)
