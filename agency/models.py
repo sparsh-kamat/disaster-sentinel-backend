@@ -2,7 +2,9 @@ from django.db import models
 
 from django.contrib.auth import get_user_model
 from django.core.validators import FileExtensionValidator
-
+import cloudinary
+import cloudinary.uploader
+from cloudinary.models import CloudinaryField
 
 
 class ExistingAgencies(models.Model):
@@ -36,17 +38,10 @@ class MissingPersonReport(models.Model):
     identification_marks = models.TextField()
     description = models.TextField(help_text="Detailed description of the missing person")
     
-    # Photo fields
-    person_photo = models.ImageField(
-        upload_to='missing_persons/photos/',
-        validators=[FileExtensionValidator(['jpg', 'jpeg', 'png'])]
-    )
-    id_card_photo = models.ImageField(
-        upload_to='missing_persons/id_cards/',
-        null=True,
-        blank=True,
-        validators=[FileExtensionValidator(['jpg', 'jpeg', 'png'])]
-    )
+    # Use CloudinaryField instead of ImageField
+    person_photo = CloudinaryField('photo', validators=[FileExtensionValidator(['jpg', 'jpeg', 'png'])])
+    id_card_photo = CloudinaryField('id_card', null=True, blank=True, validators=[FileExtensionValidator(['jpg', 'jpeg', 'png'])])
+
     
     # Status flags
     has_id_card = models.BooleanField(default=False)
