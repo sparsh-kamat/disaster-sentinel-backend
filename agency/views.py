@@ -29,6 +29,17 @@ class EventViewSet(viewsets.ModelViewSet):
             event.timeline_items.create(**item_data)
         return Response({'status': 'Timeline items added'})
     
+    def get_queryset(self):
+        """
+        If 'user_id' is in the request, filter events by that user.
+        Otherwise, return all events.
+        """
+        queryset = Event.objects.all()
+        user_id = self.request.query_params.get('user_id', None)
+        if user_id:
+            queryset = queryset.filter(user_id=user_id)
+        return queryset
+    
 class ExistingAgenciesListView(generics.ListAPIView):
     queryset = ExistingAgencies.objects.all()
     serializer_class = ExistingAgenciesSerializer
