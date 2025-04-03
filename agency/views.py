@@ -22,8 +22,15 @@ class EventViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         # Get the user_id from the request data
         user_id = self.request.data.get('user_id')
-        user = User.objects.get(id=user_id)  # Get the user by ID
-        serializer.save(user_id=user)  # Save the event with the associated user
+        if user_id:
+            try:
+                user = User.objects.get(id=user_id)  # Fetch user by user_id
+                # Save the event with the correct user_id (not the user object)
+                serializer.save(user_id=user.id)  # Save only the user ID, not the user object
+            except User.DoesNotExist:
+                raise ValueError(f"User with id {user_id} does not exist.")
+        else:
+            raise ValueError("User ID is required to create an event.")
 
     @action(detail=True, methods=['post'])
     def add_timeline(self, request, pk=None):
