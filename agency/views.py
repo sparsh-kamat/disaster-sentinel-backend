@@ -10,11 +10,17 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from .models import Event
 from .serializers import EventSerializer
+from django.contrib.auth import get_user_model
 
 class EventViewSet(viewsets.ModelViewSet):
     queryset = Event.objects.all()
     serializer_class = EventSerializer
 
+    def perform_create(self, serializer):
+        user_id = self.request.data.get('user_id')  # Get user_id from the request body
+        user = get_user_model().objects.get(id=user_id)  # Get the user using user_id
+        serializer.save(user=user)  # Associate the event with the user
+        
     @action(detail=True, methods=['post'])
     def add_timeline(self, request, pk=None):
         event = self.get_object()

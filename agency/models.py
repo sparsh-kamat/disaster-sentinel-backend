@@ -5,6 +5,10 @@ from django.core.validators import FileExtensionValidator
 import cloudinary
 import cloudinary.uploader
 from cloudinary.models import CloudinaryField
+from django.conf import settings
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 class Event(models.Model):
     EVENT_TYPE_CHOICES = [
@@ -20,6 +24,8 @@ class Event(models.Model):
         ("Free", "Free"),
         ("Paid", "Paid"),
     ]
+ # ForeignKey to the CustomUser model (instead of User)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)  # Link to the user who created the event
 
     name = models.CharField(max_length=255)
     date = models.DateField()

@@ -3,6 +3,11 @@ from .models import ExistingAgencies
 from .models import MissingPersonReport
 from .models import Event
 from .models import TimelineItem
+from django.contrib.auth import get_user_model
+from django.utils import timezone
+
+User = get_user_model()
+
 
 class MissingPersonReportSerializer(serializers.ModelSerializer):
     person_photo_url = serializers.ImageField(source='person_photo', read_only=True)
@@ -37,25 +42,39 @@ class TimelineItemSerializer(serializers.ModelSerializer):
         fields = ['id', 'time', 'activity']
 
 class EventSerializer(serializers.ModelSerializer):
+    # Serialize the timeline items
     timeline_items = TimelineItemSerializer(many=True, read_only=False)
-    
+    user_id = serializers.IntegerField(write_only=True)  # Accept user_id in request
+
     class Meta:
         model = Event
         fields = [
             'id', 'name', 'date', 'start_time', 'event_type', 'platform', 'meeting_link', 
             'meeting_id', 'venue_name', 'address', 'city', 'state', 'attendees', 
-            'reg_type', 'tags', 'description', 'location_type', 'timeline_items'
+            'reg_type', 'tags', 'description', 'location_type', 'timeline_items', 'user_id'
         ]
 
     def create(self, validated_data):
+        # Get the user_id from the request data and use it to link the event to the user
+        user_id = validated_data.pop('user_id')
+        user = User.objects.get(id=user_id)  # Get the user from the user_id
+        event = Event.objects.create(user=user, **validated_data)  # Create the event and link to the user
+
+        # Now handle timeline items
         timeline_items_data = validated_data.pop('timeline_items', [])
-        event = Event.objects.create(**validated_data)
         for item_data in timeline_items_data:
-            TimelineItem.objects.create(event=event, **item_data)
+            TimelineItem.objects.create(event=event, **item_data)  # Create timeline items
+
         return event
 
     def update(self, instance, validated_data):
-        timeline_items_data = validated_data.pop('timeline_items', [])
+        # Get the user_id and associate it with the event
+        user_id = validated_data.pop('user_id', None)
+        if user_id:
+            user = User.objects.get(id=user_id)
+            instance.user = user
+
+        # Update other event fields
         instance.name = validated_data.get('name', instance.name)
         instance.date = validated_data.get('date', instance.date)
         instance.start_time = validated_data.get('start_time', instance.start_time)
@@ -77,6 +96,7 @@ class EventSerializer(serializers.ModelSerializer):
 
         # Handle timeline items (create or update)
         existing_timeline_items = {item.id: item for item in instance.timeline_items.all()}
+        timeline_items_data = validated_data.pop('timeline_items', [])
         for item_data in timeline_items_data:
             item_id = item_data.get('id', None)
             if item_id and item_id in existing_timeline_items:
