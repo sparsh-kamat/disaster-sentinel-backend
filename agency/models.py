@@ -51,20 +51,40 @@ class Event(models.Model):
     def __str__(self):
         return self.name
 
+# class ExistingAgencies(models.Model):
+#     id = models.AutoField(primary_key=True)
+#     name = models.CharField(max_length=255)
+#     address = models.CharField(max_length=255)
+#     state = models.CharField(max_length=255)
+#     district = models.CharField(max_length=255)
+#     email = models.EmailField()
+#     telephone = models.CharField(max_length=15)
+#     phone = models.CharField(max_length=15)
+#     category = models.CharField(max_length=255)
+    
+#     class Meta:
+#         db_table = 'agency_details'
+#         managed = False
+    
+#     def __str__(self):
+#         return self.name
+    
+
 class ExistingAgencies(models.Model):
-    id = models.AutoField(primary_key=True)
+    id = models.AutoField(primary_key=True)  # Keep the primary key
     name = models.CharField(max_length=255)
     address = models.CharField(max_length=255)
+    city = models.CharField(max_length=255)
     state = models.CharField(max_length=255)
-    district = models.CharField(max_length=255)
-    email = models.EmailField()
-    phone = models.CharField(max_length=15)
-    category = models.CharField(max_length=255)
+    telephone = models.CharField(max_length=15)
+    mobile_no = models.BigIntegerField()  # Updated to match mobile_no in new table
+    website = models.URLField(null=True, blank=True)  # Added website field
+    registration_date = models.DateField(null=True, blank=True)  # Updated to store as a Date type
     
     class Meta:
-        db_table = 'agency_details'
-        managed = False
-    
+        db_table = 'existing_agencies'  # Update to match the correct table name
+        managed = False  # Prevent Django from managing this table (as it already exists in DB)
+
     def __str__(self):
         return self.name
     
