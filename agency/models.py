@@ -25,7 +25,8 @@ class Event(models.Model):
         ("Paid", "Paid"),
     ]
  # ForeignKey to the CustomUser model (instead of User)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)  # Link to the user who created the event
+     # Explicitly use user_id to refer to the user who created the event
+    user_id = models.ForeignKey(User, on_delete=models.CASCADE, related_name='events', to_field='id', db_column='user_id')  # Link to the user who created the event
 
     name = models.CharField(max_length=255)
     date = models.DateField()
