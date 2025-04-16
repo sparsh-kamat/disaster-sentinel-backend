@@ -49,7 +49,21 @@ class VolunteerInterestViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         interest = serializer.save()
         return Response(VolunteerInterestListSerializer(interest).data, status=status.HTTP_201_CREATED)
-
+    # delete
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    
+    # update
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = VolunteerInterestUpdateSerializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+    
+    
     @action(detail=True, methods=['post'], url_path='accept')
     def accept_volunteer(self, request, pk=None):
         interest = self.get_object()
