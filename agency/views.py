@@ -1,11 +1,12 @@
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from .models import ExistingAgencies
 from .serializers import ExistingAgenciesSerializer
 from rest_framework import filters
 
 from rest_framework import generics
 
-from rest_framework import viewsets
+from rest_framework import viewsets, serializers, status
+from rest_framework.views import APIView
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from .models import Event
@@ -14,7 +15,55 @@ from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
+from .models import VolunteerInterest
 
+
+# Import your serializers (adjust .serializers if necessary)
+from .serializers import (
+    VolunteerInterestSubmitSerializer,
+    VolunteerInterestListSerializer,
+    VolunteerInterestUpdateSerializer
+)
+
+
+
+
+class VolunteerInterestViewSet(viewsets.ModelViewSet):
+    queryset = VolunteerInterest.objects.all()
+
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return VolunteerInterestSubmitSerializer
+        elif self.action == 'partial_update' or self.action == 'update':
+            return VolunteerInterestUpdateSerializer
+        return VolunteerInterestListSerializer
+
+    def get_queryset(self):
+        agency_id = self.request.query_params.get('agency_id', None)
+        if agency_id:
+            return VolunteerInterest.objects.filter(agency__id=agency_id)
+        return VolunteerInterest.objects.all()
+
+    def create(self, request, *args, **kwargs):
+        serializer = VolunteerInterestSubmitSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        interest = serializer.save()
+        return Response(VolunteerInterestListSerializer(interest).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['post'], url_path='accept')
+    def accept_volunteer(self, request, pk=None):
+        interest = self.get_object()
+
+        # Optional: you can add auth and role check here
+        if request.user.is_authenticated and request.user != interest.agency:
+            return Response({'detail': 'Only the agency can accept this interest.'}, status=403)
+
+        serializer = VolunteerInterestUpdateSerializer(interest, data={"is_accepted": True}, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({'detail': 'Volunteer accepted successfully!'})
+    
+    
 class EventViewSet(viewsets.ModelViewSet):
     queryset = Event.objects.all()
     serializer_class = EventSerializer

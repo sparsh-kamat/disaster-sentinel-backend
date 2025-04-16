@@ -2,6 +2,13 @@ from rest_framework import serializers
 from .models import CustomUser
 from django.contrib.auth import authenticate
 
+
+class UserSearchSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = ['id', 'email', 'full_name', 'role'] # Specify desired output fields
+        read_only_fields = fields
+        
 class ForgotPasswordRequestSerializer(serializers.Serializer):
     email = serializers.EmailField()
 

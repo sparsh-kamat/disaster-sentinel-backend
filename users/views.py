@@ -7,7 +7,7 @@ from django.conf import settings
 import random
 from django.core.exceptions import ObjectDoesNotExist
 from .models import CustomUser
-from .serializers import UserRegistrationSerializer , VerifyUserSerializer , ForgotPasswordRequestSerializer 
+from .serializers import UserRegistrationSerializer , VerifyUserSerializer , ForgotPasswordRequestSerializer, UserSearchSerializer
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.middleware.csrf import get_token
@@ -149,6 +149,9 @@ class RegisterView(APIView):
             # print(f"OTP for {email} stored in session: {request.session[f'otp_{email}']}")  # Debug: Log OTP stored
 
             # store in cache too
+            #delete old otp
+            cache.delete(f'otp_{email}')
+            #store new otp
             cache.set(f'otp_{email}', str(otp), timeout=300)
             print(f"OTP for {email} stored in cache: {cache.get(f'otp_{email}')}")
             
@@ -230,3 +233,52 @@ class VerifyOTPView(APIView):
             return Response({'message': 'User verified successfully'}, status=status.HTTP_200_OK)
         
         return Response({'error': 'Invalid OTP'}, status=status.HTTP_400_BAD_REQUEST)
+    
+
+# --- View to Search User by Email (No Authentication/Permissions) ---
+class SearchUserByEmailView(APIView):
+    # """
+    # API endpoint to search for users by email.
+    # Expects an 'email' query parameter.
+    # Example: GET /api/users/search/?email=user@example.com
+    # NOTE: This version has no authentication or permission checks.
+    # """
+    # No authentication_classes defined
+    # No permission_classes defined
+
+    def get(self, request):
+        # Get the email from the query parameters (e.g., ?email=...)
+        email_to_search = request.query_params.get('email', None)
+
+        if not email_to_search:
+            return Response(
+                {'error': 'Email query parameter is required.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            # Perform a case-insensitive search for an exact match
+            # Only search for users with the role 'user'
+            user = CustomUser.objects.get(email__iexact=email_to_search, role='user')
+
+            # Serialize the user data using the specific serializer
+            serializer = UserSearchSerializer(user)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        except CustomUser.DoesNotExist:
+            # Return 404 if no user is found with that email and role 'user'
+            return Response(
+                {'error': 'User with this email and role "user" not found.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            # Generic error handler for unexpected issues
+            # Consider logging the error e
+            return Response(
+                {'error': 'An error occurred during the search.'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+# --- End of View ---
+    
+    
+    

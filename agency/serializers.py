@@ -2,6 +2,7 @@ from rest_framework import serializers
 from .models import ExistingAgencies
 from .models import MissingPersonReport
 from .models import Event
+from .models import VolunteerInterest
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
@@ -27,8 +28,121 @@ class MissingPersonReportSerializer(serializers.ModelSerializer):
             'updated_at'
         ]
         read_only_fields = ('reporter', 'has_id_card', 'has_person_photo')
+
         
+class VolunteerInterestSubmitSerializer(serializers.Serializer): # Inherit from base Serializer
+    """
+    Serializer for creating VolunteerInterest records without authentication.
+    Expects volunteer_id and agency_id directly in the request data.
+    Handles fetching related user/agency objects during creation.
+    """
+    # Define the fields expected directly from the frontend request body
+    volunteer_id = serializers.IntegerField(
+        write_only=True, # Only used for input, not output
+        required=True,
+        help_text="The ID of the user submitting the interest."
+    )
+    agency_id = serializers.IntegerField(
+        write_only=True, # Only used for input, not output
+        required=True,
+        help_text="The ID of the agency receiving the interest."
+    )
+    message = serializers.CharField(
+        required=False, # Optional field
+        allow_blank=True,
+        allow_null=True,
+        style={'base_template': 'textarea.html'},
+        help_text="Optional message from the volunteer."
+    )
+
+    # We are not using ModelSerializer's automatic features here,
+    # so we define the create method explicitly.
+
+    def create(self, validated_data):
+        """
+        Handles creation of the VolunteerInterest object from IDs.
+        """
+        volunteer_id = validated_data['volunteer_id']
+        agency_id = validated_data['agency_id']
+        message = validated_data.get('message') # Use .get() for optional field
+
+        try:
+            # Fetch the actual User object for the volunteer using the provided ID
+            # Add role='user' check for safety, even without auth
+            volunteer_user = User.objects.get(id=volunteer_id, role='user')
+        except User.DoesNotExist:
+            # If the user doesn't exist or isn't a 'user', raise a validation error
+            raise serializers.ValidationError(
+                {'volunteer_id': f'No active user found with ID {volunteer_id} and role "user".'}
+            )
+
+        try:
+            # Fetch the actual User object for the agency using the provided ID
+            # Add role='agency' check for safety
+            agency_user = User.objects.get(id=agency_id, role='agency')
+        except User.DoesNotExist:
+            # If the agency doesn't exist or isn't an 'agency', raise a validation error
+            raise serializers.ValidationError(
+                {'agency_id': f'No active agency found with ID {agency_id} and role "agency".'}
+            )
+
+        # --- Optional: Check for duplicate submissions ---
+        # Decide if you want to prevent multiple interests from the same volunteer to the same agency.
+        # If using unique_together in model, this check provides a cleaner error.
+        # If allowing duplicates, comment out this block.
+        if VolunteerInterest.objects.filter(volunteer=volunteer_user, agency=agency_user).exists():
+             raise serializers.ValidationError(
+                 "Volunteer interest has already been submitted by this user for this agency."
+             )
+        # --- End of Optional Duplicate Check ---
+
+        # Create the VolunteerInterest instance using the fetched objects
+        try:
+            interest = VolunteerInterest.objects.create(
+                volunteer=volunteer_user,
+                agency=agency_user,
+                message=message
+                # submitted_at is handled by auto_now_add=True in the model
+            )
+            return interest
+        except Exception as e:
+            # Catch potential database errors during creation
+            raise serializers.ValidationError(f"Failed to create volunteer interest record: {e}")
+
+    # No need for an 'update' method if this serializer is only for creation.
+ 
+
+class VolunteerInterestUpdateSerializer(serializers.ModelSerializer):
+    """
+    Serializer specifically for UPDATING the is_accepted status
+    of a VolunteerInterest record by an agency.
+    """
+    # is_accepted = serializers.BooleanField(required=True) # Explicit is okay, but often not needed
+
+    class Meta:
+        model = VolunteerInterest
+        # Only include the field(s) that should be updatable via this serializer
+        fields = ['is_accepted']
+        # IMPORTANT: Do not list 'is_accepted' in read_only_fields here!
+# ---serializer for showing the all the volunteer list 
+
+class VolunteerInterestListSerializer(serializers.ModelSerializer):
+    """
+    Serializer for listing VolunteerInterest records.
+    This serializer is used to display the list of interests.
+    """
+    class Meta:
+        model = VolunteerInterest
+        fields = [
+            'id', 'volunteer', 'agency', 'message', 'is_accepted', 
+            'submitted_at'
+        ]
+        read_only_fields = ['id', 'submitted_at']
+        # No need to include 'is_accepted' in read_only_fields
         
+
+
+
 class ExistingAgenciesSerializer(serializers.ModelSerializer):
     class Meta:
         model = ExistingAgencies
