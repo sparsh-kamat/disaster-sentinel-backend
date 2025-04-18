@@ -196,20 +196,52 @@ class VolunteerInterestUpdateSerializer(serializers.ModelSerializer):
         # IMPORTANT: Do not list 'is_accepted' in read_only_fields here!
 # ---serializer for showing the all the volunteer list 
 
+# class VolunteerInterestListSerializer(serializers.ModelSerializer):
+#     """
+#     Serializer for listing VolunteerInterest records.
+#     This serializer is used to display the list of interests.
+#     """
+#     class Meta:
+#         model = VolunteerInterest
+#         fields = [
+#             'id', 'volunteer', 'agency', 'message', 'is_accepted', 
+#             'submitted_at'
+#         ]
+#         read_only_fields = ['id', 'submitted_at']
+#         # No need to include 'is_accepted' in read_only_fields
+
+
 class VolunteerInterestListSerializer(serializers.ModelSerializer):
-    """
-    Serializer for listing VolunteerInterest records.
-    This serializer is used to display the list of interests.
-    """
+    # """
+    # Serializer for DISPLAYING VolunteerInterest records.
+    # Includes specific details (email, name, contact) from the related volunteer user.
+    # """
+    # --- Add fields pulling data from the related volunteer ---
+    volunteer_email = serializers.EmailField(source='volunteer.email', read_only=True)
+    volunteer_name = serializers.CharField(source='volunteer.full_name', read_only=True)
+    volunteer_contact = serializers.CharField(source='volunteer.contact', read_only=True)
+    # --- End added fields ---
+
+    # Optionally, you can still include the agency ID or nested agency info
+    # agency_name = serializers.CharField(source='agency.agency_profile.agency_name', read_only=True) # Example
+
     class Meta:
         model = VolunteerInterest
         fields = [
-            'id', 'volunteer', 'agency', 'message', 'is_accepted', 
-            'submitted_at'
+            'id',
+            'volunteer', # This will still show the volunteer's ID
+            # --- Include the new fields ---
+            'volunteer_email',
+            'volunteer_name',
+            'volunteer_contact',
+            # --- End new fields ---
+            'agency', # Shows agency ID
+            'message',
+            'submitted_at',
+            'is_accepted'
         ]
-        read_only_fields = ['id', 'submitted_at']
-        # No need to include 'is_accepted' in read_only_fields
-        
+        # Mark all as read-only for safety in a list view
+        read_only_fields = fields        
 
 
 

@@ -1,23 +1,32 @@
-
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from django.core.mail import send_mail
 from django.conf import settings
-import random
-from django.core.exceptions import ObjectDoesNotExist
-from .models import CustomUser
-from .serializers import UserRegistrationSerializer , VerifyUserSerializer , ForgotPasswordRequestSerializer, UserSearchSerializer
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from django.middleware.csrf import get_token
-from django.contrib.auth import authenticate, login , logout
-from .serializers import LoginSerializer , ResetPasswordSerializer 
-from django.contrib.auth.tokens import PasswordResetTokenGenerator
-from django.utils.encoding import force_bytes
-from django.utils.http import urlsafe_base64_encode , urlsafe_base64_decode
 from django.core.cache import cache
+from django.core.mail import send_mail
+from django.shortcuts import get_object_or_404
+import random
 
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.tokens import PasswordResetTokenGenerator
+
+from django.middleware.csrf import get_token
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
+
+from rest_framework import serializers, status
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from .models import CustomUser
+from .serializers import (
+    ForgotPasswordRequestSerializer,
+    LoginSerializer,
+    ResetPasswordSerializer,
+    UserLocationUpdateSerializer,
+    UserProfileDetailSerializer,
+    UserProfileUpdateSerializer,
+    UserRegistrationSerializer,
+    UserSearchSerializer,
+    VerifyUserSerializer,
+)
 
 class PasswordResetTokenGenerator(PasswordResetTokenGenerator):
     def _make_hash_value(self, user, timestamp):
@@ -278,7 +287,118 @@ class SearchUserByEmailView(APIView):
                 {'error': 'An error occurred during the search.'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-# --- End of View ---
-    
+
+
+# --- View to Update Basic Profile Details ---
+class UserProfileUpdateView(APIView):
+    """
+    Updates basic profile information (name, contact, PAN) for a specific user.
+    Uses PATCH method. Access via /api/users/<user_id>/profile/
+    NO Authentication/Permissions applied.
+    """
+    # No authentication/permission classes
+
+    def patch(self, request, user_id, *args, **kwargs):
+        # Find the user object or return 404
+        user = get_object_or_404(CustomUser, pk=user_id)
+
+        # Instantiate serializer for updating the user instance
+        # partial=True allows for partial updates (only fields provided are updated)
+        serializer = UserProfileUpdateSerializer(user, data=request.data, partial=True)
+
+        try:
+            serializer.is_valid(raise_exception=True)
+
+            # --- Custom Validation for agency_pan based on user's role ---
+            # Check consistency only if agency_pan is included in the request data
+            if 'agency_pan' in serializer.validated_data:
+                new_pan = serializer.validated_data.get('agency_pan')
+                # Use the existing user's role for validation
+                if user.role == 'agency' and not new_pan:
+                    raise serializers.ValidationError(
+                        {'agency_pan': 'Agency PAN cannot be removed for agency accounts.'}
+                        # Or handle as needed - maybe allow removal? Depends on logic.
+                        # If allowing removal, remove this check.
+                    )
+                if user.role != 'agency' and new_pan:
+                    raise serializers.ValidationError(
+                        {'agency_pan': 'PAN number is only allowed for agency accounts.'}
+                    )
+            # --- End Custom Validation ---
+
+            # Save the changes
+            updated_user = serializer.save()
+
+            # Return the updated user data using the detail serializer
+            response_serializer = UserProfileDetailSerializer(updated_user)
+            return Response(response_serializer.data, status=status.HTTP_200_OK)
+
+        except serializers.ValidationError as e:
+            return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            print(f"Error updating profile for user {user_id}: {e}") # Basic logging
+            return Response(
+                {'error': 'An unexpected error occurred.'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+# --- View to Update User Location Details ---
+class UserLocationUpdateView(APIView):
+    """
+    Updates location information (state, city, lat, long) for a specific user.
+    Uses PATCH method. Access via /api/users/<user_id>/location/
+    NO Authentication/Permissions applied.
+    """
+    # No authentication/permission classes
+
+    def patch(self, request, user_id, *args, **kwargs):
+        # Find the user object or return 404
+        user = get_object_or_404(CustomUser, pk=user_id)
+
+        # Instantiate serializer for updating location
+        serializer = UserLocationUpdateSerializer(user, data=request.data, partial=True)
+
+        try:
+            serializer.is_valid(raise_exception=True)
+            updated_user = serializer.save()
+
+            # Return the updated user data using the detail serializer
+            response_serializer = UserProfileDetailSerializer(updated_user)
+            return Response(response_serializer.data, status=status.HTTP_200_OK)
+
+        except serializers.ValidationError as e:
+            return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            print(f"Error updating location for user {user_id}: {e}") # Basic logging
+            return Response(
+                {'error': 'An unexpected error occurred.'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+# --- NEW View to Retrieve User Details ---
+class UserDetailView(APIView):
+    # """
+    # Retrieves profile details for a specific user identified by their ID.
+    # Handles GET requests to /api/users/<user_id>/
+    # NO Authentication/Permissions applied by default.
+    # """
+
+    def get(self, request, user_id, *args, **kwargs):
+        """
+        Handles GET request to fetch user details.
+        """
+        # Find the user object by primary key (user_id) or return 404
+        user = get_object_or_404(CustomUser, pk=user_id)
+
+        # Serialize the user data using the detail serializer
+        serializer = UserProfileDetailSerializer(user)
+
+        # Return the serialized data
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+# ... (rest of your views)
+  
     
     
