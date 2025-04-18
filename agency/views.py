@@ -68,8 +68,8 @@ class AgencyProfileViewSet(viewsets.ModelViewSet):
             user_id = serializer.validated_data.pop('user_id')
             try:
                  # Fetch the user specified by user_id
-                 agency_user = CustomUser.objects.get(pk=user_id, role='agency')
-            except CustomUser.DoesNotExist:
+                 agency_user = User.objects.get(pk=user_id, role='agency')
+            except User.DoesNotExist:
                  # This should ideally be caught by serializer's validate_user_id,
                  # but handle here just in case.
                  return Response({'user_id': 'Invalid user ID provided or user is not an agency.'}, status=status.HTTP_400_BAD_REQUEST)
