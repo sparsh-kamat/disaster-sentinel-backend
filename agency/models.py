@@ -7,8 +7,93 @@ import cloudinary.uploader
 from cloudinary.models import CloudinaryField
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.utils.translation import gettext_lazy as _
+from django.core.exceptions import ValidationError
+
 
 User = get_user_model()
+
+
+class AgencyProfile(models.Model):
+    """
+    Stores detailed profile information for a CustomUser with role='agency'.
+    """
+    # Link to the actual agency user account. OneToOne ensures one profile per agency user.
+    # primary_key=True makes this link the primary key of the profile table.
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE, # If the User is deleted, delete their profile too
+        primary_key=True,
+        related_name='agency_profile', # Access profile via user.agency_profile
+        limit_choices_to={'role': 'agency'}, # Ensure this only links to agency users
+        help_text=_("The agency user account this profile belongs to.")
+    )
+
+    # Fields matching your form (excluding duplicates from CustomUser like email)
+    # agency_name might be different from user.full_name, keep if needed
+    agency_name = models.CharField(max_length=255, help_text=_("Formal name of the agency."))
+    contact1 = models.CharField(max_length=20, help_text=_("Primary contact number."))
+    contact2 = models.CharField(max_length=20, blank=True, null=True, help_text=_("Secondary contact number (optional)."))
+    agency_type = models.CharField(max_length=100, help_text=_("Type of the agency (e.g., NGO, Government, Private)."))
+    website = models.URLField(max_length=200, blank=True, null=True, help_text=_("Agency's official website (optional)."))
+    date_of_establishment = models.DateField(help_text=_("Date the agency was established."))
+    volunteers = models.PositiveIntegerField(null=True, blank=True, help_text=_("Approximate number of volunteers (optional).")) # Use PositiveIntegerField
+    address = models.TextField(help_text=_("Full operational address."))
+    district = models.CharField(max_length=100, help_text=_("District where the agency is located."))
+    state = models.CharField(max_length=100, help_text=_("State where the agency is located."))
+    lat = models.FloatField(null=True, blank=True, help_text=_("Latitude of the agency's location."))
+    lng = models.FloatField(null=True, blank=True, help_text=_("Longitude of the agency's location."))
+    description = models.TextField(help_text=_("Detailed description of the agency's activities and mission."))
+
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = _("Agency Profile")
+        verbose_name_plural = _("Agency Profiles")
+
+    def __str__(self):
+        # Use agency_name or fallback to user's email/full_name
+        return self.agency_name if self.agency_name else self.user.email
+
+
+class AgencyImage(models.Model):
+    """
+    Stores images associated with an AgencyProfile, using Cloudinary.
+    """
+    # Link back to the Agency Profile (Many images can belong to one profile)
+    agency_profile = models.ForeignKey(
+        AgencyProfile,
+        on_delete=models.CASCADE,
+        related_name='images', # Access images via agency_profile.images.all()
+        help_text=_("The agency profile these images belong to.")
+    )
+
+    # Cloudinary field to store the image reference
+    # 'agency_images' is the folder name where images will be stored in Cloudinary
+    image = CloudinaryField(
+         'agency_images', # Recommended: specify a folder name
+         help_text=_("Image uploaded for the agency profile.")
+         # Add transformations, etc. here if needed:
+         # resource_type="image", # Optional: Explicitly set resource type
+         # folder="agency_images" # Another way to set folder
+    )
+
+    # Optional caption for the image
+    caption = models.CharField(max_length=255, blank=True, null=True)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = _("Agency Image")
+        verbose_name_plural = _("Agency Images")
+        ordering = ['uploaded_at'] # Show oldest images first by default
+
+    def __str__(self):
+        # Show the agency it belongs to and the image public ID
+        return f"Image for {self.agency_profile.agency_name or self.agency_profile.user.email} ({self.image.public_id})"
+
+
 class VolunteerInterest(models.Model):
     """
     Represents a user's submitted interest in volunteering for an Agency.
@@ -119,8 +204,6 @@ class AgencyMemberPermission(models.Model):
     def __str__(self):
         # Provides a readable representation in the Django admin or shell
         return f"Permissions for {self.member.email} from Agency {self.agency.email}"
-
-
 
 class Event(models.Model):
     EVENT_TYPE_CHOICES = [

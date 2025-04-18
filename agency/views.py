@@ -1,29 +1,129 @@
 from django.shortcuts import render, get_object_or_404
-from .models import ExistingAgencies
-from .serializers import ExistingAgenciesSerializer
-from rest_framework import filters
+from django.contrib.auth import get_user_model
 
-from rest_framework import generics
-
-from rest_framework import viewsets, serializers, status
+from rest_framework import (
+    viewsets,
+    status,
+    permissions,
+    serializers,
+    generics,
+    filters,
+)
 from rest_framework.views import APIView
 from rest_framework.decorators import action
+from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
-from .models import Event
-from .serializers import EventSerializer
-from django.contrib.auth import get_user_model
+
+from .models import (
+    AgencyProfile,
+    AgencyImage,
+    ExistingAgencies,
+    Event,
+    VolunteerInterest,
+)
+from .serializers import (
+    AgencyProfileCreateSerializer,
+    AgencyProfileDetailSerializer,
+    AgencyProfileListSerializer,
+    AgencyProfileUpdateSerializer,
+    AgencyImageSerializer,
+    ExistingAgenciesSerializer,
+    EventSerializer,
+    VolunteerInterestSubmitSerializer,
+    VolunteerInterestListSerializer,
+    VolunteerInterestUpdateSerializer,
+)
 
 User = get_user_model()
 
-from .models import VolunteerInterest
+class AgencyProfileViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for Agency Profiles.
+    Handles List, Create (with images), Retrieve, Update, Delete (profile).
+    NO Authentication or Permissions applied.
+    """
+    queryset = AgencyProfile.objects.all().select_related('user').prefetch_related('images')
+    parser_classes = [MultiPartParser, FormParser] # Handles file uploads
+    permission_classes = [permissions.AllowAny] # Public access
+
+    def get_serializer_class(self):
+        """Choose serializer based on action."""
+        if self.action == 'list':
+            return AgencyProfileListSerializer
+        elif self.action == 'create':
+            return AgencyProfileCreateSerializer
+        elif self.action in ['update', 'partial_update']:
+            return AgencyProfileUpdateSerializer
+        # Default for 'retrieve'
+        return AgencyProfileDetailSerializer
+
+    def create(self, request, *args, **kwargs):
+        """
+        Override create to handle user_id input and image uploads.
+        """
+        serializer = self.get_serializer(data=request.data)
+        try:
+            serializer.is_valid(raise_exception=True)
+            # Extract user_id before creating profile instance
+            user_id = serializer.validated_data.pop('user_id')
+            try:
+                 # Fetch the user specified by user_id
+                 agency_user = CustomUser.objects.get(pk=user_id, role='agency')
+            except CustomUser.DoesNotExist:
+                 # This should ideally be caught by serializer's validate_user_id,
+                 # but handle here just in case.
+                 return Response({'user_id': 'Invalid user ID provided or user is not an agency.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Create the profile instance, linking the fetched user
+            # Pass the remaining validated data
+            profile = AgencyProfile.objects.create(user=agency_user, **serializer.validated_data)
+
+            # Handle Image Uploads separately after profile is created
+            images_data = request.FILES.getlist('images')
+            for image_data in images_data:
+                # Create AgencyImage linked to the profile, Cloudinary handles upload
+                AgencyImage.objects.create(agency_profile=profile, image=image_data)
+
+            # Return response using the Detail serializer to show created object with images
+            output_serializer = AgencyProfileDetailSerializer(profile, context=self.get_serializer_context())
+            headers = self.get_success_headers(output_serializer.data)
+            return Response(output_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+        except serializers.ValidationError as e:
+            # Catch validation errors from serializer (inc. validate_user_id)
+            return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            # Catch other potential errors during creation
+            print(f"Error creating AgencyProfile: {e}") # Basic logging
+            return Response({'error':'An internal server error occurred.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    # Default methods for retrieve, update, partial_update, destroy will now use
+    # the serializers selected by get_serializer_class.
+    # Update/Partial Update uses AgencyProfileUpdateSerializer.
+    # Retrieve uses AgencyProfileDetailSerializer.
+    # List uses AgencyProfileListSerializer.
+    # Destroy works on the AgencyProfile.
 
 
-# Import your serializers (adjust .serializers if necessary)
-from .serializers import (
-    VolunteerInterestSubmitSerializer,
-    VolunteerInterestListSerializer,
-    VolunteerInterestUpdateSerializer
-)
+class AgencyImageDeleteView(APIView):
+    """
+    Allows deleting a specific AgencyImage by its ID.
+    NO Authentication or Permissions applied.
+    """
+    permission_classes = [permissions.AllowAny] # Public access
+
+    def delete(self, request, pk, format=None):
+        image_instance = get_object_or_404(AgencyImage, pk=pk)
+
+        # --- Permission Check REMOVED as requested ---
+        # Original Check (for reference):
+        # if image_instance.agency_profile.user != request.user:
+        #     return Response(...)
+        # --- End Removed Check ---
+
+        # Delete the image record (Cloudinary file might need separate cleanup later if desired)
+        image_instance.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 

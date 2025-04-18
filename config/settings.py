@@ -66,6 +66,8 @@ INSTALLED_APPS = [
     'agency',
     'floodprediction',
     'floodstations',
+    'cloudinary_storage',
+    'cloudinary',
 ]
 
 MIDDLEWARE = [

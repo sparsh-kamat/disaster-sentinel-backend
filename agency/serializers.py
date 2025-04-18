@@ -3,33 +3,103 @@ from .models import ExistingAgencies
 from .models import MissingPersonReport
 from .models import Event
 from .models import VolunteerInterest
+from .models import AgencyProfile
+from .models import AgencyImage
+
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
 
-class MissingPersonReportSerializer(serializers.ModelSerializer):
-    person_photo_url = serializers.ImageField(source='person_photo', read_only=True)
-    id_card_photo_url = serializers.ImageField(source='id_card_photo', read_only=True)
+# --- Serializer for Image Details (Used for nesting) ---
+class AgencyImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AgencyImage
+        fields = ['id', 'image', 'caption', 'uploaded_at']
+        read_only_fields = ['id', 'uploaded_at'] # Image can be replaced via update? Usually handled separately.
+
+# --- Serializer for CREATING Agency Profile (No Auth) ---
+class AgencyProfileCreateSerializer(serializers.ModelSerializer):
+    """
+    Serializer for CREATING AgencyProfile without authentication.
+    Expects 'user_id' in the input data. Images handled via request.FILES.
+    """
+    user_id = serializers.IntegerField(
+        write_only=True,
+        required=True,
+        help_text="The ID of the agency user this profile belongs to."
+    )
 
     class Meta:
-        model = MissingPersonReport
+        model = AgencyProfile
+        # Exclude the actual 'user' field as we are taking 'user_id' input
+        # List fields expected in the POST body (besides user_id and images)
         fields = [
-            'id',
-            'full_name',
-            'last_seen_location',
-            'identification_marks',
-            'description',  # Added description field
-            'person_photo_url',
-            'id_card_photo_url',
-            'has_id_card',
-            'has_person_photo',
-            'created_at',
-            'updated_at'
+            'user_id', 'agency_name', 'contact1', 'contact2', 'agency_type',
+            'website', 'date_of_establishment', 'volunteers', 'address',
+            'district', 'state', 'lat', 'lng', 'description'
         ]
-        read_only_fields = ('reporter', 'has_id_card', 'has_person_photo')
 
-        
+    def validate_user_id(self, value):
+        """Check if user_id is valid and doesn't have a profile yet."""
+        try:
+            user = User.objects.get(pk=value, role='agency')
+        except User.DoesNotExist:
+            raise serializers.ValidationError("User with this ID does not exist or is not an agency.")
+
+        if AgencyProfile.objects.filter(user_id=value).exists():
+            raise serializers.ValidationError("Agency profile already exists for this user.")
+        return value
+
+# --- Serializer for UPDATING Agency Profile (No Auth) ---
+class AgencyProfileUpdateSerializer(serializers.ModelSerializer):
+    """
+    Serializer for UPDATING AgencyProfile fields.
+    """
+    class Meta:
+        model = AgencyProfile
+        # Fields allowed for update via PUT/PATCH
+        # Exclude the primary key ('user') and timestamps
+        exclude = ['user', 'created_at', 'updated_at']
+
+# --- Serializer for LISTING Agency Profiles (No Auth, No Images) ---
+class AgencyProfileListSerializer(serializers.ModelSerializer):
+    """
+    Serializer for LISTING AgencyProfiles concisely (no images/description).
+    """
+    email = serializers.EmailField(source='user.email', read_only=True)
+    user_id = serializers.IntegerField(source='user.id', read_only=True) # Use source='user.id'
+
+    class Meta:
+        model = AgencyProfile
+        # Concise list of fields for display
+        fields = [
+            'user_id', 'email', 'agency_name', 'contact1', 'district', 'state',
+            'lat', 'lng', 'agency_type'
+        ]
+        read_only_fields = fields
+
+# --- Serializer for RETRIEVING Agency Profile (No Auth, With Images) ---
+class AgencyProfileDetailSerializer(serializers.ModelSerializer):
+    """
+    Serializer for RETRIEVING a single AgencyProfile with details and images.
+    """
+    images = AgencyImageSerializer(many=True, read_only=True)
+    email = serializers.EmailField(source='user.email', read_only=True)
+    user_id = serializers.IntegerField(source='user.id', read_only=True) # Use source='user.id'
+
+    class Meta:
+        model = AgencyProfile
+        # All relevant fields including nested images
+        fields = [
+            'user_id', 'email', 'agency_name', 'contact1', 'contact2', 'agency_type',
+            'website', 'date_of_establishment', 'volunteers', 'address',
+            'district', 'state', 'lat', 'lng', 'description',
+            'created_at', 'updated_at', 'images'
+        ]
+        read_only_fields = fields # Primarily for display
+
+
 class VolunteerInterestSubmitSerializer(serializers.Serializer): # Inherit from base Serializer
     """
     Serializer for creating VolunteerInterest records without authentication.
