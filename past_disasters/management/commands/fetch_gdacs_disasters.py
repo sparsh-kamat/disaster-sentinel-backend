@@ -1,6 +1,6 @@
 # <your_app_name>/management/commands/fetch_gdacs_disasters.py
 
-import xml.etree.ElementTree as ET
+from lxml import etree as ET
 import requests
 from datetime import datetime
 from zoneinfo import ZoneInfo
