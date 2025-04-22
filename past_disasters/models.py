@@ -12,45 +12,50 @@ class GdacsDisasterEvent(models.Model):
         primary_key=True,
         help_text=_("Unique GDACS Event ID (used as PK)")
     )
-    title = models.CharField(max_length=255, help_text=_("Title of the event from the feed."))
+    title = models.CharField(max_length=500, help_text=_("Title of the event from the feed."))
     description = models.TextField(blank=True, null=True, help_text=_("Description of the event."))
-    link = models.URLField(max_length=512, help_text=_("Link to the GDACS event page."))
+    link = models.URLField(max_length=1024, help_text=_("Link to the GDACS event page."))
     pubDate = models.DateTimeField(null=True, blank=True, help_text=_("Publication date from the feed."))
     latitude = models.FloatField(null=True, blank=True, help_text=_("Latitude coordinate."))
     longitude = models.FloatField(null=True, blank=True, help_text=_("Longitude coordinate."))
 
-    # --- NEW/UPDATED FIELD ---
     state = models.CharField(
         max_length=100,
         blank=True,
         null=True,
-        db_index=True, # Index for faster filtering by state
+        db_index=True,
         help_text=_("State/Province determined via reverse geocoding (if available).")
     )
-    # --- END NEW/UPDATED FIELD ---
 
     eventtype = models.CharField(max_length=50, db_index=True, help_text=_("Type of event (e.g., EQ, TC, FL)."))
     alertlevel = models.CharField(max_length=20, blank=True, null=True, db_index=True, help_text=_("Alert level (Green, Orange, Red)."))
-    severity = models.CharField(max_length=100, blank=True, null=True, help_text=_("Severity description (e.g., 'M 7.1')."))
-    population = models.CharField(max_length=50, blank=True, null=True, help_text=_("Affected population estimate (textual)."))
-    country = models.CharField(max_length=100, blank=True, null=True, db_index=True, help_text=_("Country name(s)."))
+    severity = models.CharField(max_length=255, blank=True, null=True, help_text=_("Severity description (e.g., 'M 7.1')."))
+    population = models.CharField(max_length=100, blank=True, null=True, help_text=_("Affected population estimate (textual)."))
+    country = models.CharField(max_length=255, blank=True, null=True, db_index=True, help_text=_("Country name(s)."))
     iso3 = models.CharField(max_length=10, blank=True, null=True, db_index=True, help_text=_("ISO3 country code."))
     fromdate = models.DateTimeField(null=True, blank=True, help_text=_("Start date/time of the event."))
     todate = models.DateTimeField(null=True, blank=True, help_text=_("End date/time of the event."))
     iscurrent = models.BooleanField(default=True, db_index=True, help_text=_("Flag indicating if the event is currently listed as active by GDACS."))
 
-    # Timestamps managed by Django
+    report_url = models.URLField(
+        max_length=1024,
+        blank=True,
+        null=True,
+        help_text=_("URL to the detailed GDACS report page.")
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['-pubDate', '-fromdate'] # Order by most recent dates first
+        ordering = ['-pubDate', '-fromdate']  # Order by most recent dates first
         verbose_name = "GDACS Disaster Event"
         verbose_name_plural = "GDACS Disaster Events"
 
     def __str__(self):
         state_info = f" ({self.state})" if self.state else ""
         return f"{self.eventtype} - {self.title}{state_info} ({self.eventid})"
+
 
 
 

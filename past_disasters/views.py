@@ -2,6 +2,8 @@ from rest_framework import generics
 from .models import PastDisaster
 from .serializers import PastDisasterSerializer
 from rest_framework import filters
+from past_disasters.models import GdacsDisasterEvent
+from .serializers import GdacsDisasterEventSerializer
 
 class PastDisasterListView(generics.ListAPIView):
     queryset = PastDisaster.objects.all()
@@ -24,3 +26,9 @@ class PastDisasterListView(generics.ListAPIView):
             queryset = queryset.filter(id=disaster_id)
 
         return queryset
+    
+
+
+class GdacsDisasterEventListView(generics.ListAPIView):
+    queryset = GdacsDisasterEvent.objects.all()
+    serializer_class = GdacsDisasterEventSerializer
