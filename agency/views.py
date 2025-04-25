@@ -13,6 +13,8 @@ from rest_framework.views import APIView
 from rest_framework.decorators import action
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
+from django.shortcuts import get_object_or_404
+from django.db import transaction # For atomic updates
 
 from .models import (
     AgencyProfile,
@@ -35,6 +37,130 @@ from .serializers import (
 )
 
 User = get_user_model()
+
+from .models import AgencyMemberPermission
+
+# Adjust serializer imports
+from .serializers import (
+    AgencyMemberPermissionDetailSerializer,
+    AgencyMemberPermissionUpdateSerializer
+)
+
+class AgencyPermissionListView(APIView):
+    """
+    Lists all permissions granted by a specific agency.
+    Handles GET requests to /api/agency/<agency_id>/permissions/
+    NO Authentication/Permissions applied.
+    """
+    permission_classes = [permissions.AllowAny] # Public access
+
+    def get(self, request, agency_id, *args, **kwargs):
+        # Optional: Check if agency_id corresponds to an actual agency user
+        agency = get_object_or_404(User, pk=agency_id, role='agency')
+
+        # Fetch permissions granted BY this agency, prefetch member details
+        permissions = AgencyMemberPermission.objects.filter(
+            agency=agency
+        ).select_related('member') # Efficiently fetch related member data
+
+        # Serialize the results using the detail serializer
+        serializer = AgencyMemberPermissionDetailSerializer(permissions, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class AgencyMemberPermissionManageView(APIView):
+    """
+    Manages permissions for a specific member under a specific agency.
+    Handles GET, PUT, PATCH, DELETE requests to:
+    /api/agency/<agency_id>/permissions/<member_id>/
+    NO Authentication/Permissions applied.
+    """
+    permission_classes = [permissions.AllowAny] # Public access
+
+    def get_object(self, agency_id, member_id):
+        """Helper method to get the permission object or raise 404."""
+        # Optional: Validate agency_id and member_id first
+        get_object_or_404(User, pk=agency_id, role='agency')
+        get_object_or_404(User, pk=member_id) # Ensure member exists
+
+        # Find the specific permission record
+        obj = get_object_or_404(AgencyMemberPermission, agency_id=agency_id, member_id=member_id)
+        return obj
+
+    def get(self, request, agency_id, member_id, *args, **kwargs):
+        """Retrieve permissions for a specific member."""
+        permission = self.get_object(agency_id, member_id)
+        serializer = AgencyMemberPermissionDetailSerializer(permission)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @transaction.atomic # Ensure database consistency during update/create
+    def put(self, request, agency_id, member_id, *args, **kwargs):
+        """Set/Replace permissions for a member (Creates if not exists)."""
+        # Validate agency and member exist
+        try:
+            agency = User.objects.get(pk=agency_id, role='agency')
+            member = User.objects.get(pk=member_id) # Consider adding role='user' check
+        except User.DoesNotExist:
+            return Response(
+                {"error": "Invalid agency or member ID."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Get existing or initialize new permission object
+        # Using get_or_create is slightly cleaner than try/except get_object_or_404
+        permission_obj, created = AgencyMemberPermission.objects.get_or_create(
+            agency=agency,
+            member=member
+            # Defaults are handled by the model definition
+        )
+
+        # Use the Update serializer to validate incoming permission flags
+        # Pass the instance to update, ensure all fields are provided for PUT
+        serializer = AgencyMemberPermissionUpdateSerializer(permission_obj, data=request.data)
+
+        try:
+            serializer.is_valid(raise_exception=True)
+            updated_permission = serializer.save()
+            # Return the updated data using the Detail serializer
+            response_serializer = AgencyMemberPermissionDetailSerializer(updated_permission)
+            status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
+            return Response(response_serializer.data, status=status_code)
+        except serializers.ValidationError as e:
+             return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            print(f"Error setting permissions for member {member_id} under agency {agency_id}: {e}")
+            return Response({'error': 'An internal server error occurred.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+    @transaction.atomic
+    def patch(self, request, agency_id, member_id, *args, **kwargs):
+        """Partially update permissions for a member."""
+        permission_obj = self.get_object(agency_id, member_id) # Raises 404 if not found
+
+        # Use the Update serializer with partial=True
+        serializer = AgencyMemberPermissionUpdateSerializer(permission_obj, data=request.data, partial=True)
+
+        try:
+            serializer.is_valid(raise_exception=True)
+            updated_permission = serializer.save()
+            # Return the updated data using the Detail serializer
+            response_serializer = AgencyMemberPermissionDetailSerializer(updated_permission)
+            return Response(response_serializer.data, status=status.HTTP_200_OK)
+        except serializers.ValidationError as e:
+             return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            print(f"Error patching permissions for member {member_id} under agency {agency_id}: {e}")
+            return Response({'error': 'An internal server error occurred.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+    @transaction.atomic
+    def delete(self, request, agency_id, member_id, *args, **kwargs):
+        """Remove all permissions for a member under an agency."""
+        permission = self.get_object(agency_id, member_id) # Raises 404 if not found
+        permission.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
 
 class AgencyProfileViewSet(viewsets.ModelViewSet):
     """
