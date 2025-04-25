@@ -10,7 +10,61 @@ from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
+from .models import AgencyMemberPermission
 
+# --- Serializer for nested Member details ---
+class MemberInfoSerializer(serializers.ModelSerializer):
+    """Read-only serializer for basic member info."""
+    class Meta:
+        model = User
+        fields = ['id', 'full_name', 'email', 'contact'] # Fields to display
+        read_only = True
+
+# --- Serializer for Displaying Permissions ---
+class AgencyMemberPermissionDetailSerializer(serializers.ModelSerializer):
+    """Displays permission details including nested member info."""
+    # Use the nested serializer for the 'member' field
+    member = MemberInfoSerializer(read_only=True)
+
+    class Meta:
+        model = AgencyMemberPermission
+        # Include all fields from the model + the nested 'member'
+        fields = [
+            'agency', # Shows agency ID
+            'member', # Shows nested member details
+            'can_view_missing',
+            'can_edit_missing',
+            'can_view_announcements',
+            'can_edit_announcements',
+            'can_make_announcements',
+            'can_manage_volunteers',
+            'is_agency_admin',
+            'granted_at',
+            'updated_at'
+        ]
+        read_only_fields = fields # This serializer is for display only
+
+# --- Serializer for Updating/Setting Permissions ---
+class AgencyMemberPermissionUpdateSerializer(serializers.ModelSerializer):
+    """Handles updating the boolean permission flags."""
+    # All boolean fields are included by default from the model
+    # They are optional for PATCH, required for PUT (unless default exists)
+
+    class Meta:
+        model = AgencyMemberPermission
+        # Only include the permission flags that can be set/updated
+        fields = [
+            'can_view_missing',
+            'can_edit_missing',
+            'can_view_announcements',
+            'can_edit_announcements',
+            'can_make_announcements',
+            'can_manage_volunteers',
+            'is_agency_admin',
+        ]
+        # Exclude 'agency' and 'member' as they are determined by the URL/view
+        # exclude = ['agency', 'member', 'granted_at', 'updated_at'] # Alternative
+        
 # --- Serializer for Image Details (Used for nesting) ---
 class AgencyImageSerializer(serializers.ModelSerializer):
     class Meta:
