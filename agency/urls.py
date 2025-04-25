@@ -16,13 +16,13 @@ urlpatterns = [
     path('existing-agencies/', ExistingAgenciesListView.as_view(), name='existing_agencies_list'),
     path('agency-images/<int:pk>/', AgencyImageDeleteView.as_view(), name='agency_image_delete'),
      # GET /api/agency/<agency_id>/permissions/
-    path('/agency/<int:agency_id>/permissions/',
+    path('agency/<int:agency_id>/permissions/',
          AgencyPermissionListView.as_view(),
          name='agency-permission-list'),
 
     # Manage permissions FOR a specific member UNDER an agency
     # GET, PUT, PATCH, DELETE /api/agency/<agency_id>/permissions/<member_id>/
-    path('/agency/<int:agency_id>/permissions/<int:member_id>/',
+    path('agency/<int:agency_id>/permissions/<int:member_id>/',
          AgencyMemberPermissionManageView.as_view(),
          name='agency-member-permission-manage'),
 
