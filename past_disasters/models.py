@@ -48,7 +48,7 @@ class GdacsDisasterEvent(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['-pubDate', '-fromdate']  # Order by most recent dates first
+        ordering = [models.F('pubDate').desc(nulls_last=True), models.F('fromdate').desc(nulls_last=True)]        
         verbose_name = "GDACS Disaster Event"
         verbose_name_plural = "GDACS Disaster Events"
 

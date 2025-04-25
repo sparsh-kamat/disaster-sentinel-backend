@@ -2,73 +2,119 @@ from gdacs.api import GDACSAPIReader
 from past_disasters.models import GdacsDisasterEvent
 from django.utils.timezone import make_aware
 from django.core.management.base import BaseCommand
+import time
 import datetime
-import logging
-
-# Configure logging
-logger = logging.getLogger(__name__)
+from geopy.geocoders import Nominatim
+from geopy.exc import GeocoderTimedOut, GeocoderUnavailable
+from django.utils.dateparse import parse_datetime as parse_date
 
 def send_alert(disaster_data):
     print("Sending alert:", disaster_data)
 
+import time
+import datetime
+from geopy.geocoders import Nominatim
+from geopy.exc import GeocoderTimedOut, GeocoderUnavailable
+from gdacs.api import GDACSAPIReader
+from past_disasters.models import GdacsDisasterEvent
+from django.utils.timezone import make_aware
+from django.utils.dateparse import parse_datetime as parse_date
+
+geolocator = Nominatim(user_agent="gdacs_disaster_app")
+
+def parse_date_safe(date_str):
+    """Safely parse date string to timezone-aware datetime."""
+    try:
+        return make_aware(datetime.datetime.strptime(date_str, '%a, %d %b %Y %H:%M:%S %Z'))
+    except Exception as e:
+        print(f"⚠️ Failed to parse date '{date_str}': {e}")
+        return None
+
+def get_state_from_coordinates(lat, lon, retries=3):
+    """Get state name using reverse geocoding with retry and delay."""
+    attempt = 0
+    while attempt < retries:
+        try:
+            location = geolocator.reverse((lat, lon), exactly_one=True, language='en', timeout=10)
+            if location and location.raw.get('address'):
+                return location.raw['address'].get('state') or location.raw['address'].get('region')
+        except (GeocoderTimedOut, GeocoderUnavailable) as geo_err:
+            print(f"⏳ Reverse geocoding attempt {attempt+1} failed (timeout/unavailable): {geo_err}")
+            time.sleep(1.5)  # wait before retry
+        except Exception as e:
+            print(f"❌ Unexpected geocoding error: {e}")
+            break
+        attempt += 1
+    return None
+
+
 def fetch_and_store_gdacs_disasters():
     reader = GDACSAPIReader()
-    geojson_data = reader.latest_events()
 
-    if hasattr(geojson_data, 'features'):
-        events = geojson_data.features
-    else:
-        print("Error: GeoJSON object doesn't contain 'features'.")
+    try:
+        geojson_data = reader.latest_events()
+    except Exception as e:
+        print(f"❌ Failed to fetch GDACS events: {e}")
         return
 
-    for event in events:
-        props = event['properties']
-        event_id = props.get('eventid')
-        event_type = props.get('eventtype', '')
+    features = getattr(geojson_data, 'features', None)
+    if not features:
+        print("❌ No 'features' found in the fetched GDACS GeoJSON.")
+        return
 
-        if not event_id:
-            continue
-
-        if GdacsDisasterEvent.objects.filter(eventid=event_id).exists():
-            print(f"Event {event_id} already exists, skipping.")
-            continue
-
-        # Fetch enriched details using get_event
+    for event in features:
         try:
-            print(f"Fetching details for Event ID: {event_id}, Event Type: {event_type}")
-            detailed_event = reader.get_event(event_type=str(event_type), event_id=str(event_id))
+            props = event.get('properties', {})
+            event_id = props.get('eventid')
+            event_type = props.get('eventtype', '')
 
-            # ✅ Skip if not current
-            iscurrent = detailed_event.get('gdacs:iscurrent', 'false').lower() == 'true'
-            if not iscurrent:
-                print(f"Skipping past disaster event {event_id} (not current).")
+            if not event_id:
+                print("⚠️ Skipping event without 'eventid'.")
                 continue
 
-            # Extract coordinates
-            latitude = float(detailed_event.get("geo:Point", {}).get("geo:lat", 0))
-            longitude = float(detailed_event.get("geo:Point", {}).get("geo:long", 0))
+            if GdacsDisasterEvent.objects.filter(eventid=event_id).exists():
+                print(f"ℹ️ Event {event_id} already exists, skipping.")
+                continue
 
-            # Parse and clean fields
-            title = detailed_event.get('title', props.get('name', ''))
-            description = detailed_event.get('description', props.get('description', ''))
-            link = detailed_event.get('link', props.get('url', {}).get('report', ''))
-            pubDate = detailed_event.get('pubDate')
-            fromdate = detailed_event.get('gdacs:fromdate')
-            todate = detailed_event.get('gdacs:todate')
+            try:
+                detailed_event = reader.get_event(event_type=str(event_type), event_id=str(event_id))
+            except Exception as e:
+                print(f"❌ Failed to fetch details for {event_id}: {e}")
+                continue
+
+            is_current = str(detailed_event.get('gdacs:iscurrent', 'false')).lower() == 'true'
+            if not is_current:
+                print(f"⏭️ Skipping non-current disaster event {event_id}.")
+                continue
+
+            geo_point = detailed_event.get("geo:Point", {})
+            latitude = float(geo_point.get("geo:lat", 0) or 0)
+            longitude = float(geo_point.get("geo:long", 0) or 0)
+
+            title = props.get('name', '')
+            description = props.get('description', '')
+            link = props.get('url', {}).get('report', '')
+
+            pub_date = parse_date(detailed_event.get('pubDate'))
+            from_date = parse_date(detailed_event.get('gdacs:fromdate'))
+            to_date = parse_date(detailed_event.get('gdacs:todate'))
+
             alertlevel = detailed_event.get('gdacs:alertlevel', '')
             severity = detailed_event.get('gdacs:severity', {}).get('#text', '')
             population = detailed_event.get('gdacs:population', {}).get('#text', '')
             country = detailed_event.get('gdacs:country', '')
             iso3 = detailed_event.get('gdacs:iso3', '')
-            state = None  # Optional reverse geocoding
-            # image_url = detailed_event.get('enclosure', {}).get('@url') or None
 
-            new_event = GdacsDisasterEvent.objects.create(
+            # 🧠 Fetch state safely
+            state = get_state_from_coordinates(latitude, longitude)
+            time.sleep(1.1)  # Respect Nominatim rate limit
+
+            GdacsDisasterEvent.objects.create(
                 eventid=event_id,
                 title=title,
                 description=description,
                 link=link,
-                pubDate=make_aware(datetime.datetime.strptime(pubDate, '%a, %d %b %Y %H:%M:%S %Z')) if pubDate else None,
+                pubDate=pub_date,
                 latitude=latitude,
                 longitude=longitude,
                 state=state,
@@ -78,32 +124,22 @@ def fetch_and_store_gdacs_disasters():
                 population=population,
                 country=country,
                 iso3=iso3,
-                fromdate=make_aware(datetime.datetime.strptime(fromdate, '%a, %d %b %Y %H:%M:%S %Z')) if fromdate else None,
-                todate=make_aware(datetime.datetime.strptime(todate, '%a, %d %b %Y %H:%M:%S %Z')) if todate else None,
+                fromdate=from_date,
+                todate=to_date,
                 report_url=link,
-                # image_url=image_url,
                 iscurrent=True
             )
 
-            send_alert({
-                "title": title,
-                "eventtype": event_type,
-                "latitude": latitude,
-                "longitude": longitude,
-                "alertlevel": alertlevel,
-                "severity": severity,
-                "population": population,
-                "country": country,
-                "state": state,
-                "link": link,
-                # "image_url": image_url
-            })
-        
-        except Exception as e:
-            logger.error(f"Error fetching event details for {event_id}: {e}")
-            continue  # Skip this event and move to the next one
+            print(f"✅ Stored disaster event {event_id} ({state or 'No state'}).")
 
-    print("✅ GDACS enriched disaster events fetch completed.")
+        except Exception as e:
+            print(f"⚠️ Skipping problematic event due to error: {e}")
+            continue
+
+    print("✅ Completed fetching and storing GDACS events.")
+
+
+
 
 class Command(BaseCommand):
     help = "Fetch and store enriched GDACS disaster data"
