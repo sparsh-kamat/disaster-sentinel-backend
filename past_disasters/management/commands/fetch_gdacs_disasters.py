@@ -2,22 +2,53 @@ from gdacs.api import GDACSAPIReader
 from past_disasters.models import GdacsDisasterEvent
 from django.utils.timezone import make_aware
 from django.core.management.base import BaseCommand
+import time
 import datetime
+from geopy.geocoders import Nominatim
+from geopy.exc import GeocoderTimedOut, GeocoderUnavailable
+from django.utils.dateparse import parse_datetime as parse_date
 
 def send_alert(disaster_data):
     print("Sending alert:", disaster_data)
 
-def parse_date(date_str):
+import time
+import datetime
+from geopy.geocoders import Nominatim
+from geopy.exc import GeocoderTimedOut, GeocoderUnavailable
+from gdacs.api import GDACSAPIReader
+from past_disasters.models import GdacsDisasterEvent
+from django.utils.timezone import make_aware
+from django.utils.dateparse import parse_datetime as parse_date
+
+geolocator = Nominatim(user_agent="gdacs_disaster_app")
+
+def parse_date_safe(date_str):
     """Safely parse date string to timezone-aware datetime."""
     try:
         return make_aware(datetime.datetime.strptime(date_str, '%a, %d %b %Y %H:%M:%S %Z'))
     except Exception as e:
-        print(f"Warning: Failed to parse date '{date_str}': {e}")
+        print(f"⚠️ Failed to parse date '{date_str}': {e}")
         return None
 
-def fetch_and_store_gdacs_disasters():
-    from django.utils.dateparse import parse_datetime as parse_date
+def get_state_from_coordinates(lat, lon, retries=3):
+    """Get state name using reverse geocoding with retry and delay."""
+    attempt = 0
+    while attempt < retries:
+        try:
+            location = geolocator.reverse((lat, lon), exactly_one=True, language='en', timeout=10)
+            if location and location.raw.get('address'):
+                return location.raw['address'].get('state') or location.raw['address'].get('region')
+        except (GeocoderTimedOut, GeocoderUnavailable) as geo_err:
+            print(f"⏳ Reverse geocoding attempt {attempt+1} failed (timeout/unavailable): {geo_err}")
+            time.sleep(1.5)  # wait before retry
+        except Exception as e:
+            print(f"❌ Unexpected geocoding error: {e}")
+            break
+        attempt += 1
+    return None
 
+
+def fetch_and_store_gdacs_disasters():
     reader = GDACSAPIReader()
 
     try:
@@ -73,7 +104,10 @@ def fetch_and_store_gdacs_disasters():
             population = detailed_event.get('gdacs:population', {}).get('#text', '')
             country = detailed_event.get('gdacs:country', '')
             iso3 = detailed_event.get('gdacs:iso3', '')
-            state = None  # Optional: reverse geocode here later
+
+            # 🧠 Fetch state safely
+            state = get_state_from_coordinates(latitude, longitude)
+            time.sleep(1.1)  # Respect Nominatim rate limit
 
             GdacsDisasterEvent.objects.create(
                 eventid=event_id,
@@ -96,13 +130,14 @@ def fetch_and_store_gdacs_disasters():
                 iscurrent=True
             )
 
-            print(f"✅ Stored disaster event {event_id}.")
+            print(f"✅ Stored disaster event {event_id} ({state or 'No state'}).")
 
         except Exception as e:
             print(f"⚠️ Skipping problematic event due to error: {e}")
             continue
 
     print("✅ Completed fetching and storing GDACS events.")
+
 
 
 

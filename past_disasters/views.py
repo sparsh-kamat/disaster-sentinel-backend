@@ -29,6 +29,13 @@ class PastDisasterListView(generics.ListAPIView):
     
 
 
+from django.db.models import F
+
 class GdacsDisasterEventListView(generics.ListAPIView):
-    queryset = GdacsDisasterEvent.objects.all()
     serializer_class = GdacsDisasterEventSerializer
+
+    def get_queryset(self):
+        return GdacsDisasterEvent.objects.all().order_by(
+            F('pubDate').desc(nulls_last=True),
+            F('fromdate').desc(nulls_last=True)
+        )
