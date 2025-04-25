@@ -26,7 +26,11 @@ from .serializers import (
     UserRegistrationSerializer,
     UserSearchSerializer,
     VerifyUserSerializer,
+    UserPermissionDetailSerializer,
 )
+
+from agency.models import AgencyMemberPermission # Assuming permissions model is in agency app
+from django.utils.translation import gettext_lazy as _
 
 class PasswordResetTokenGenerator(PasswordResetTokenGenerator):
     def _make_hash_value(self, user, timestamp):
@@ -100,36 +104,59 @@ class LogoutView(APIView):
         logout(request)
         return Response({'message': 'Logout successful'}, status=status.HTTP_200_OK)
     
+
 class LoginView(APIView):
+    """
+    Handles user login, authenticates credentials, logs the user in (session),
+    and returns basic user info along with granted permissions.
+    """
+
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
+
         email = serializer.validated_data['email']
         password = serializer.validated_data['password']
-        
+
         # Authenticate the user
         user = authenticate(request, email=email, password=password)
-        
+
         if user is not None:
             if user.is_verified:
-                # Log the user in
+                # Log the user in (creates a session)
                 login(request, user)
-                # return Response({'message': 'Login successful'}, status=status.HTTP_200_OK)
-                return Response({
+
+                # --- Fetch and Serialize Permissions ---
+                permissions_granted = AgencyMemberPermission.objects.filter(
+                    member=user # Find permissions where this user is the member
+                ).select_related('agency') # Fetch related agency data efficiently
+
+                # Use the serializer created previously for permissions granted TO a user
+                permission_serializer = UserPermissionDetailSerializer(permissions_granted, many=True)
+                # --- End Fetch and Serialize ---
+
+                # --- Construct Response ---
+                response_data = {
                     'message': 'Login successful',
                     'user_id': user.id,
                     'email': user.email,
                     'role': user.role,
-                    'full_name': user.full_name
-                }, status=status.HTTP_200_OK)
+                    'full_name': user.full_name,
+                    # Add the serialized permissions list to the response
+                    'permissions': permission_serializer.data
+                }
+                # --- End Construct Response ---
+
+                return Response(response_data, status=status.HTTP_200_OK)
             else:
+                # User exists but is not verified
                 return Response({'error': 'User is not verified'}, status=status.HTTP_401_UNAUTHORIZED)
         else:
+            # Authentication failed (invalid email or password)
             return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
-        
-        
+
+# ... (Rest of your views.py)
 class GetCSRFToken(APIView):
     def get(self, request):
         csrf_token = get_token(request)

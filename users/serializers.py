@@ -2,6 +2,43 @@ from rest_framework import serializers
 from .models import CustomUser
 from django.contrib.auth import authenticate
 
+from agency.models import AgencyMemberPermission # Assuming permissions model is in agency app
+
+# --- Optional: Serializer for basic agency info ---
+class GrantingAgencyInfoSerializer(serializers.ModelSerializer):
+    """Read-only serializer for basic granting agency info."""
+    # Consider adding agency_name from AgencyProfile if needed/available
+    class Meta:
+        model = CustomUser # Assuming agency is represented by a CustomUser
+        fields = ['id', 'full_name', 'email'] # Fields to show about the agency
+        read_only = True
+
+# --- Serializer for Permissions Granted TO a User ---
+class UserPermissionDetailSerializer(serializers.ModelSerializer):
+    """
+    Displays permissions granted TO a specific user, showing the granting agency.
+    """
+    # Use the nested serializer for the 'agency' field
+    agency = GrantingAgencyInfoSerializer(read_only=True)
+
+    class Meta:
+        model = AgencyMemberPermission
+        # List the fields to include in the response
+        fields = [
+            'agency', # Shows nested agency details
+            # List the actual permission flags
+            'can_view_missing',
+            'can_edit_missing',
+            'can_view_announcements',
+            'can_edit_announcements',
+            'can_make_announcements',
+            'can_manage_volunteers',
+            'is_agency_admin',
+            'granted_at',
+            'updated_at'
+            # Exclude 'member' field as it's redundant in this context
+        ]
+        read_only_fields = fields # This serializer is for display only
 
 class UserSearchSerializer(serializers.ModelSerializer):
     class Meta:
