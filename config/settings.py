@@ -68,6 +68,7 @@ INSTALLED_APPS = [
     'floodstations',
     'cloudinary_storage',
     'cloudinary',
+    'missingreport',
 ]
 
 MIDDLEWARE = [

@@ -10,4 +10,5 @@ urlpatterns = [
     path('api/', include('agency.urls')),  # Include URLs from the 'agency' app (for the agency API)
     path('', include('floodprediction.urls')),  # Include URLs from the 'floodprediction' app
     path('api/', include('floodstations.urls')),  # Include URLs from the 'floodstations' app
+    path('api/', include('missingreport.urls')),  # Include URLs from the 'missingreport' app
 ]

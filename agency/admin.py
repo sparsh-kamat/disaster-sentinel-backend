@@ -6,7 +6,6 @@ from django.conf import settings
 # Import models from the current app (.)
 from .models import (
     ExistingAgencies,
-    MissingPersonReport,
     AgencyProfile,
     AgencyImage,
     VolunteerInterest
@@ -97,23 +96,6 @@ class VolunteerInterestAdmin(admin.ModelAdmin):
 
 # --- Existing Registrations (Keep these) ---
 
-@admin.register(MissingPersonReport)
-class MissingPersonReportAdmin(admin.ModelAdmin):
-    list_display = ('full_name', 'reporter', 'last_seen_location', 'created_at')
-    search_fields = ('full_name', 'reporter__email', 'identification_marks', 'description')
-    list_filter = ('has_id_card', 'has_person_photo', 'created_at')
-    readonly_fields = ('created_at', 'updated_at')
-    fieldsets = (
-        ('Personal Information', {
-            'fields': ('full_name', 'last_seen_location', 'identification_marks', 'description')
-        }),
-        ('Photos', {
-            'fields': ('person_photo', 'id_card_photo')
-        }),
-        ('Metadata', {
-            'fields': ('reporter', 'created_at', 'updated_at')
-        }),
-    )
 
 # Simple registration for ExistingAgencies (if no customization needed)
 admin.site.register(ExistingAgencies)
