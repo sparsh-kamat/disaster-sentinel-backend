@@ -39,3 +39,9 @@ class GdacsDisasterEventListView(generics.ListAPIView):
             F('pubDate').desc(nulls_last=True),
             F('fromdate').desc(nulls_last=True)
         )
+
+from .serializers import GdacsDisasterEventTitleStateSerializer
+
+class GdacsDisasterEventTitleStateListView(generics.ListAPIView):
+    queryset = GdacsDisasterEvent.objects.all()  # Or filter as needed
+    serializer_class = GdacsDisasterEventTitleStateSerializer
