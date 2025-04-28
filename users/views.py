@@ -173,36 +173,61 @@ class RegisterView(APIView):
         # Check if the user already exists
         existing_user = CustomUser.objects.filter(email=email).first()
         
+        
         if existing_user:
-            if existing_user.is_verified:  # If already verified, reject re-registration
-                return Response({'error': 'User already registered and verified. Please log in.'}, 
-                                status=status.HTTP_400_BAD_REQUEST)
-            
-            # If user is not verified, resend OTP instead of creating a new account
-            otp = random.randint(100000, 999999)
-            # request.session[f'otp_{email}'] = str(otp)
-            # request.session.save()
-            # print(f"OTP for {email} stored in session: {request.session[f'otp_{email}']}")  # Debug: Log OTP stored
-
-            # store in cache too
-            #delete old otp
-            cache.delete(f'otp_{email}')
-            #store new otp
-            cache.set(f'otp_{email}', str(otp), timeout=300)
-            print(f"OTP for {email} stored in cache: {cache.get(f'otp_{email}')}")
-            
-            try:
-                send_mail(
-                    'Disaster Sentinel - Account Verification (Resent)',
-                    f'Your new OTP is {otp}',
-                    settings.DEFAULT_FROM_EMAIL,
-                    [email],
-                    fail_silently=False,
+            # User with this email exists. Check if verified.
+            if existing_user.is_verified:
+                # Already verified - cannot re-register.
+                return Response(
+                    {'error': 'User already registered and verified. Please log in.'},
+                    status=status.HTTP_400_BAD_REQUEST
                 )
-                return Response({'message': 'OTP resent successfully. Please verify your email.'}, 
-                              status=status.HTTP_200_OK)
-            except Exception as e:
-                return Response({'error': 'Failed to send OTP'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            else:
+                # --- User exists but is NOT verified: Delete and Recreate ---
+                self.stdout.write(f"User {email} exists but is not verified. Deleting old record.") # Optional logging
+                try:
+                    existing_user.delete() # Delete the old unverified record
+                    self.stdout.write(f"Successfully deleted old record for {email}.") # Optional logging
+                except Exception as e:
+                    # Handle potential deletion errors (rare)
+                    self.stderr.write(f"Error deleting existing unverified user {email}: {e}")
+                    return Response(
+                        {'error': 'Could not replace existing unverified user. Please contact support.'},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    )
+                # --- End Delete and Recreate ---
+                # Execution will now continue below to create the new user
+
+        # if existing_user:
+        #     if existing_user.is_verified:  # If already verified, reject re-registration
+        #         return Response({'error': 'User already registered and verified. Please log in.'}, 
+        #                         status=status.HTTP_400_BAD_REQUEST)
+            
+        #     # If user is not verified, resend OTP instead of creating a new account
+        #     otp = random.randint(100000, 999999)
+        #     # request.session[f'otp_{email}'] = str(otp)
+        #     # request.session.save()
+        #     # print(f"OTP for {email} stored in session: {request.session[f'otp_{email}']}")  # Debug: Log OTP stored
+
+        #     # store in cache too
+        #     #delete old otp
+        #     cache.delete(f'otp_{email}')
+        #     #store new otp
+        #     cache.set(f'otp_{email}', str(otp), timeout=300)
+        #     print(f"OTP for {email} stored in cache: {cache.get(f'otp_{email}')}")
+            
+        #     try:
+        #         send_mail(
+        #             'Disaster Sentinel - Account Verification (Resent)',
+        #             f'Your new OTP is {otp}',
+        #             settings.DEFAULT_FROM_EMAIL,
+        #             [email],
+        #             fail_silently=False,
+        #         )
+        #         return Response({'message': 'OTP resent successfully. Please verify your email.'}, 
+        #                       status=status.HTTP_200_OK)
+        #     except Exception as e:
+        #         return Response({'error': 'Failed to send OTP'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
         # If user doesn't exist, create a new one
         user = CustomUser(
