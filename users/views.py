@@ -184,15 +184,16 @@ class RegisterView(APIView):
                 )
             else:
                 # --- User exists but is NOT verified: Delete and Recreate ---
-                self.stdout.write(f"User {email} exists but is not verified. Deleting old record.") # Optional logging
+                 # <<< FIX: Replace self.stdout/stderr with print() >>>
+                print(f"INFO: User {email} exists but is not verified. Deleting old record.") # Use print for logging
                 try:
                     existing_user.delete() # Delete the old unverified record
-                    self.stdout.write(f"Successfully deleted old record for {email}.") # Optional logging
+                    print(f"INFO: Successfully deleted old record for {email}.") # Use print for logging
                 except Exception as e:
                     # Handle potential deletion errors (rare)
-                    self.stderr.write(f"Error deleting existing unverified user {email}: {e}")
+                    print(f"ERROR: Error deleting existing unverified user {email}: {e}") # Use print for error logging
                     return Response(
-                        {'error': 'Could not replace existing unverified user. Please contact support.'},
+                        {'error': 'Failed to delete existing unverified user. Please try again.'},
                         status=status.HTTP_500_INTERNAL_SERVER_ERROR
                     )
                 # --- End Delete and Recreate ---
