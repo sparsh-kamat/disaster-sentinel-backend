@@ -5,6 +5,8 @@ from django.shortcuts import get_object_or_404
 import random
 
 from django.contrib.auth import authenticate, login, logout
+from django.utils import timezone
+import datetime
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 
 from django.middleware.csrf import get_token
@@ -16,6 +18,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import CustomUser
+from .models import OTPStorage
+
 from .serializers import (
     ForgotPasswordRequestSerializer,
     LoginSerializer,
@@ -241,14 +245,22 @@ class RegisterView(APIView):
         user.set_password(serializer.validated_data['password'])
         user.save()
 
-        # Generate OTP and send email
+        # --- Generate OTP and store in DB ---
         otp = random.randint(100000, 999999)
-        # request.session[f'otp_{email}'] = str(otp)
-        # request.session.save()
-        # print(f"OTP for {email} stored in session: {request.session[f'otp_{email}']}")  # Debug: Log OTP stored
-        cache.set(f'otp_{email}', str(otp), timeout=300)
-        print(f"OTP for {email} stored in cache: {cache.get(f'otp_{email}')}")
-            
+        otp_expiry_time = timezone.now() + datetime.timedelta(minutes=5) # e.g., 5 minute expiry
+
+        # Delete any old OTP record for this email first
+        OTPStorage.objects.filter(email=email).delete()
+
+        # Create the new OTP record
+        OTPStorage.objects.create(
+            email=email,
+            otp=str(otp), # Store OTP as string
+            expires_at=otp_expiry_time
+        )
+        print(f"DEBUG: OTP for {email} stored in DB. Expires at: {otp_expiry_time}")
+
+
         # session info
         # print(request.session.items())
         # print(f"Session ID: {request.session.session_key}")
@@ -273,29 +285,74 @@ class RegisterView(APIView):
                         status=status.HTTP_201_CREATED)
 
 
+# class VerifyOTPView(APIView):
+#     def post(self, request):
+#         serializer = VerifyUserSerializer(data=request.data)
+        
+#         if not serializer.is_valid():
+#             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+#         email = serializer.validated_data['email']
+#         otp = serializer.validated_data['otp']
+        
+#         # Debug cache directly
+        
+        
+#         if cached_otp and cached_otp == str(otp):
+#             user = CustomUser.objects.get(email=email)
+#             user.is_verified = True
+#             user.save()
+#             cache.delete(f'otp_{email}')
+#             return Response({'message': 'User verified successfully'}, status=status.HTTP_200_OK)
+        
+#         return Response({'error': 'Invalid OTP'}, status=status.HTTP_400_BAD_REQUEST)
+    
 class VerifyOTPView(APIView):
     def post(self, request):
         serializer = VerifyUserSerializer(data=request.data)
-        
+
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
+
         email = serializer.validated_data['email']
-        otp = serializer.validated_data['otp']
-        
-        # Debug cache directly
-        cached_otp = cache.get(f'otp_{email}')
-        print(f"Cache lookup for {email}: {cached_otp}")  # Add this line
-        
-        if cached_otp and cached_otp == str(otp):
-            user = CustomUser.objects.get(email=email)
-            user.is_verified = True
-            user.save()
-            cache.delete(f'otp_{email}')
-            return Response({'message': 'User verified successfully'}, status=status.HTTP_200_OK)
-        
-        return Response({'error': 'Invalid OTP'}, status=status.HTTP_400_BAD_REQUEST)
-    
+        otp_entered = serializer.validated_data['otp']
+
+        try:
+            # Find the OTP record for the email
+            otp_record = OTPStorage.objects.get(email=email)
+
+            # Check if expired
+            if otp_record.is_expired():
+                print(f"DEBUG: OTP for {email} found but expired at {otp_record.expires_at}")
+                otp_record.delete() # Clean up expired OTP
+                return Response({'error': 'OTP has expired'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Check if OTP matches
+            if otp_record.otp == str(otp_entered):
+                # OTP is correct and not expired
+                user = CustomUser.objects.get(email=email)
+                user.is_verified = True
+                user.save()
+                otp_record.delete() # Delete OTP record after successful verification
+                print(f"DEBUG: User {email} verified successfully. OTP record deleted.")
+                return Response({'message': 'User verified successfully'}, status=status.HTTP_200_OK)
+            else:
+                # OTP is incorrect
+                print(f"DEBUG: Invalid OTP entered for {email}. Expected {otp_record.otp}, got {otp_entered}")
+                return Response({'error': 'Invalid OTP'}, status=status.HTTP_400_BAD_REQUEST)
+
+        except OTPStorage.DoesNotExist:
+            # No OTP record found for this email
+            print(f"DEBUG: No OTP record found for {email}")
+            return Response({'error': 'Invalid OTP or no OTP requested'}, status=status.HTTP_400_BAD_REQUEST)
+        except CustomUser.DoesNotExist:
+            # Should not happen if OTP record exists, but handle defensively
+            print(f"ERROR: User {email} not found during OTP verification despite OTP record existing.")
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            print(f"ERROR: Unexpected error during OTP verification for {email}: {e}")
+            return Response({'error': 'An error occurred during verification.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 # --- View to Search User by Email (No Authentication/Permissions) ---
 class SearchUserByEmailView(APIView):

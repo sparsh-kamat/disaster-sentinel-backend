@@ -1,7 +1,27 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.core.exceptions import ValidationError
+from django.utils import timezone
+import datetime
 
+class OTPStorage(models.Model):
+    """Stores OTPs temporarily in the database."""
+    email = models.EmailField(unique=True, help_text="Email address the OTP was sent to.")
+    otp = models.CharField(max_length=6, help_text="The 6-digit OTP.")
+    # Store when the OTP expires
+    expires_at = models.DateTimeField(help_text="Timestamp when this OTP will expire.")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def is_expired(self):
+        """Check if the OTP has expired."""
+        return timezone.now() >= self.expires_at
+
+    def __str__(self):
+        return f"OTP for {self.email} (Expires: {self.expires_at})"
+
+    class Meta:
+        verbose_name = "OTP Storage"
+        verbose_name_plural = "OTP Storage"
 
 # Create your models here.
 class CustomUserManager(BaseUserManager):
