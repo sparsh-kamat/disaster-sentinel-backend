@@ -116,13 +116,13 @@ class UserLocationUpdateSerializer(serializers.ModelSerializer):
     """
     # Make fields optional for PATCH requests
     state = serializers.CharField(max_length=255, required=False, allow_blank=True, allow_null=True)
-    city = serializers.CharField(max_length=255, required=False, allow_blank=True, allow_null=True)
+    district = serializers.CharField(max_length=255, required=False, allow_blank=True, allow_null=True)
     lat = serializers.FloatField(required=False, allow_null=True)
     long = serializers.FloatField(required=False, allow_null=True) # Match model field name 'long'
 
     class Meta:
         model = CustomUser
-        fields = ('state', 'city', 'lat', 'long')
+        fields = ('state', 'district', 'lat', 'long')
 
 # --- Serializer for Displaying User Details (Used in Responses) ---
 class UserProfileDetailSerializer(serializers.ModelSerializer):
@@ -135,6 +135,6 @@ class UserProfileDetailSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'email', 'full_name', 'contact', 'role', 'agency_pan',
             'is_verified', 'is_active', 'date_joined',
-            'state', 'city', 'lat', 'long'
+            'state', 'district', 'lat', 'long'
         )
         read_only_fields = fields # Ensure it's only used for output
