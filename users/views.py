@@ -147,6 +147,10 @@ class LoginView(APIView):
                     'email': user.email,
                     'role': user.role,
                     'full_name': user.full_name,
+                    # state and district are optional
+                    'state': user.state,
+                    'district': user.district,
+                    'contact': user.contact,
                     # Add the serialized permissions list to the response
                     'permissions': permission_serializer.data
                 }
@@ -240,8 +244,11 @@ class RegisterView(APIView):
             full_name=serializer.validated_data['full_name'],
             contact=serializer.validated_data['contact'],
             role=serializer.validated_data['role'],
-            agency_pan=serializer.validated_data.get('agency_pan')
+            agency_pan=serializer.validated_data.get('agency_pan'),
+            state=serializer.validated_data.get('state'),         # <<< ADDED
+            district=serializer.validated_data.get('district')    # <<< ADDED
         )
+            
         user.set_password(serializer.validated_data['password'])
         user.save()
 

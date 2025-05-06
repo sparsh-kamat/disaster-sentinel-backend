@@ -6,11 +6,9 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from django.shortcuts import get_object_or_404
 from django.db import transaction
 
-# Adjust model imports
 from .models import MissingPersonReport
-from users.models import CustomUser # Assuming user model is in 'users' app
+from users.models import CustomUser
 
-# Adjust serializer imports
 from .serializers import (
     MissingPersonReportCreateSerializer,
     MissingPersonReportListSerializer,
@@ -18,60 +16,56 @@ from .serializers import (
 )
 
 class MissingPersonReportViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet for Missing Person Reports.
-    Handles List, Create (with direct images), Retrieve, Delete.
-    Update (PUT/PATCH) is currently basic - needs custom logic for image updates.
-    NO Authentication or Permissions applied.
-    """
     queryset = MissingPersonReport.objects.all().select_related('reporter')
-    parser_classes = [MultiPartParser, FormParser] # Handle file uploads
-    permission_classes = [permissions.AllowAny] # Public access
+    parser_classes = [MultiPartParser, FormParser]
+    permission_classes = [permissions.AllowAny]
 
     def get_serializer_class(self):
-        """Choose serializer based on action."""
         if self.action == 'list':
             return MissingPersonReportListSerializer
         elif self.action == 'create':
             return MissingPersonReportCreateSerializer
-        # Default for retrieve, update, partial_update
         return MissingPersonReportDetailSerializer
 
-    @transaction.atomic # Ensure database consistency during creation
+    @transaction.atomic
     def create(self, request, *args, **kwargs):
-        """
-        Override create to handle reporter_id input and direct file uploads
-        for identity_card_image and person_photo.
-        """
-        # Use the appropriate serializer determined by get_serializer_class
         serializer = self.get_serializer(data=request.data)
         try:
             serializer.is_valid(raise_exception=True)
-            reporter_id = serializer.validated_data.pop('reporter_id')
+            
+            # Extract validated data for model creation
+            # Serializer already mapped frontend names to model field names via 'source'
+            # or by matching names directly.
+            validated_data = serializer.validated_data
+            reporter_id = validated_data.pop('reporter_id')
+
             try:
                  reporter_user = CustomUser.objects.get(pk=reporter_id)
             except CustomUser.DoesNotExist:
                  return Response({'reporter_id': 'Invalid reporter user ID provided.'}, status=status.HTTP_400_BAD_REQUEST)
 
             # Get files directly from request.FILES using keys from your React form
-            identity_card_file = request.FILES.get('identityCard')
-            person_photo_file = request.FILES.get('photos')
+            # Frontend form uses name="idCard" and name="photo"
+            identity_card_file = request.FILES.get('idCard')
+            person_photo_file = request.FILES.get('photo')
 
-            # --- Validation: Check if required person_photo was sent ---
-            # Make sure 'person_photo' is not blank/null in your model if required
+            # Validation for required person_photo
             if not person_photo_file and not MissingPersonReport._meta.get_field('person_photo').blank:
-                 return Response({'photos': 'Person photo is required.'}, status=status.HTTP_400_BAD_REQUEST)
-            # --- End Validation ---
+                 return Response({'photo': 'Person photo is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Create the report instance, passing files directly to CloudinaryFields
+            # Create the report instance
+            # The validated_data from the serializer now contains keys matching the model fields
+            # due to the 'source' attribute or direct name match in the serializer.
             report = MissingPersonReport.objects.create(
                 reporter=reporter_user,
-                identity_card_image=identity_card_file, # Pass file or None
-                person_photo=person_photo_file,       # Pass file
-                **serializer.validated_data # Pass other validated text fields
+                identity_card_image=identity_card_file,
+                person_photo=person_photo_file,
+                # Pass other validated fields.
+                # Serializer's validated_data keys should now align with model fields
+                # e.g., validated_data['full_name'], validated_data['last_seen_location'], etc.
+                **validated_data
             )
 
-            # Return response using the Detail serializer to show the created object
             output_serializer = MissingPersonReportDetailSerializer(report, context=self.get_serializer_context())
             headers = self.get_success_headers(output_serializer.data)
             return Response(output_serializer.data, status=status.HTTP_201_CREATED, headers=headers)
@@ -79,14 +73,6 @@ class MissingPersonReportViewSet(viewsets.ModelViewSet):
         except serializers.ValidationError as e:
             return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            print(f"Error creating MissingPersonReport: {e}") # Basic logging
-            # import traceback; traceback.print_exc() # Uncomment for detailed traceback
+            print(f"Error creating MissingPersonReport: {e}")
+            # import traceback; traceback.print_exc()
             return Response({'error':'An internal server error occurred during report creation.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-    # Default methods handle:
-    # list(): GET / (uses MissingPersonReportListSerializer)
-    # retrieve(): GET /{pk}/ (uses MissingPersonReportDetailSerializer)
-    # destroy(): DELETE /{pk}/ (deletes report)
-    # update()/partial_update(): PUT/PATCH /{pk}/ (uses MissingPersonReportDetailSerializer by default,
-    #                                            does NOT handle image updates well without overriding)
-

@@ -79,7 +79,8 @@ class CustomUser(AbstractUser):
     #location fields , will be added by later not at registration
     
     state = models.CharField(max_length=255, blank=True, null=True)
-    city = models.CharField(max_length=255, blank=True, null=True)
+    # city = models.CharField(max_length=255, blank=True, null=True)
+    district = models.CharField(max_length=255, blank=True, null=True) # <<< ADDED/UPDATED
     lat = models.FloatField(blank=True, null=True)
     long = models.FloatField(blank=True, null=True)
     

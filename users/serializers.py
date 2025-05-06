@@ -60,10 +60,14 @@ class LoginSerializer(serializers.Serializer):
 class UserRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
     agency_pan = serializers.CharField(required=False, allow_null=True)
+    # state and district from payload map directly to model fields
+    state = serializers.CharField(max_length=255, required=False, allow_blank=True, allow_null=True)
+    district = serializers.CharField(max_length=255, required=False, allow_blank=True, allow_null=True)
+
     
     class Meta:
         model = CustomUser
-        fields = ('email', 'password', 'full_name', 'contact', 'role', 'agency_pan')
+        fields = ('email', 'password', 'full_name', 'contact', 'role', 'agency_pan', 'state', 'district')
         extra_kwargs = {
             'password': {'write_only': True},
             'email': {'validators': []},

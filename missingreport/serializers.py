@@ -1,82 +1,96 @@
 # missingreport/serializers.py
 
 from rest_framework import serializers
-# Adjust model imports as needed
 from .models import MissingPersonReport
 from users.models import CustomUser # Assuming user model is in 'users' app
 
-# --- Serializer for Nested Reporter Details ---
+# --- Serializer for Nested Reporter Details (No change needed) ---
 class ReporterInfoSerializer(serializers.ModelSerializer):
-    """Read-only serializer for basic reporter info."""
     class Meta:
         model = CustomUser
-        fields = ['id', 'full_name', 'email', 'contact'] # Fields to display about reporter
+        fields = ['id', 'full_name', 'email', 'contact']
         read_only = True
 
 # --- Serializer for Creating Reports (No Auth) ---
 class MissingPersonReportCreateSerializer(serializers.ModelSerializer):
-    """Handles creation, expects reporter_id. Files handled via request.FILES."""
-    reporter_id = serializers.IntegerField(
-        write_only=True,
-        required=True,
-        help_text="ID of the user submitting the report."
-    )
-    # identity_card_image and person_photo are handled via request.FILES
-    # They are not explicitly listed here for input validation via serializer fields
+    reporter_id = serializers.IntegerField(write_only=True, required=True)
+    # Frontend sends 'name', 'age', 'gender', 'description', 'identificationMarks',
+    # 'lastSeenPlace', 'state', 'district', 'disasterType', 'contactInfo', 'additionalInfo'
+    # We need to map these to model fields if names differ.
+
+    # Explicitly define fields from frontend if names differ or need specific validation
+    name = serializers.CharField(source='full_name', max_length=255, write_only=True, required=True)
+    age = serializers.IntegerField(required=False, allow_null=True, write_only=True)
+    gender = serializers.ChoiceField(choices=MissingPersonReport.GENDER_CHOICES, required=False, allow_null=True, write_only=True)
+    # description is same
+    identificationMarks = serializers.CharField(source='identification_marks', required=False, allow_blank=True, allow_null=True, write_only=True)
+    lastSeenPlace = serializers.CharField(source='last_seen_location', write_only=True, required=True)
+    # state is same
+    # district is same
+    disasterType = serializers.ChoiceField(source='disaster_type', choices=MissingPersonReport.DISASTER_TYPE_CHOICES, required=False, allow_null=True, write_only=True)
+    contactInfo = serializers.CharField(source='reporter_contact_info', max_length=255, write_only=True, required=True)
+    additionalInfo = serializers.CharField(source='additional_info', required=False, allow_blank=True, allow_null=True, write_only=True)
+
 
     class Meta:
         model = MissingPersonReport
-        # Fields expected from the form data (excluding files and reporter itself)
+        # List all fields that the serializer will handle for creation.
+        # These are the fields that will be in validated_data after is_valid()
+        # and before being passed to model instance creation.
         fields = [
-            'reporter_id', 'full_name', 'description', 'identification_marks',
-            'last_seen_location', 'reporter_contact_info'
+            'reporter_id',
+            'name', # from frontend, maps to full_name
+            'age',
+            'gender',
+            'description',
+            'identificationMarks', # from frontend, maps to identification_marks
+            'lastSeenPlace', # from frontend, maps to last_seen_location
+            'state',
+            'district',
+            'disasterType', # from frontend, maps to disaster_type
+            'contactInfo', # from frontend, maps to reporter_contact_info
+            'additionalInfo', # from frontend, maps to additional_info
+            # File fields (identity_card_image, person_photo) are handled directly from request.FILES in the view
         ]
 
     def validate_reporter_id(self, value):
-        """Check if reporter_id is valid."""
         if not CustomUser.objects.filter(pk=value).exists():
             raise serializers.ValidationError("User with the provided reporter_id does not exist.")
         return value
 
 # --- Serializer for Listing Reports (Concise) ---
 class MissingPersonReportListSerializer(serializers.ModelSerializer):
-    """Concise representation for listing reports."""
     reporter_email = serializers.EmailField(source='reporter.email', read_only=True, allow_null=True)
-    # Indicate if images exist without sending full URLs
     has_identity_card = serializers.SerializerMethodField(read_only=True)
     has_person_photo = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = MissingPersonReport
         fields = [
-            'id', 'full_name', 'reporter_email', 'last_seen_location',
+            'id', 'full_name', 'age', 'gender', # Added age, gender
+            'reporter_email', 'last_seen_location', 'state', 'district', # Added state, district
+            'disaster_type', # Added disaster_type
             'created_at', 'has_identity_card', 'has_person_photo'
         ]
         read_only_fields = fields
 
     def get_has_identity_card(self, obj):
-        # Check if the identity_card_image field has a value (CloudinaryField stores URL or None)
         return bool(obj.identity_card_image)
 
     def get_has_person_photo(self, obj):
-        # Check if the person_photo field has a value
         return bool(obj.person_photo)
 
 # --- Serializer for Report Details (With Image URLs & Reporter) ---
 class MissingPersonReportDetailSerializer(serializers.ModelSerializer):
-    """Detailed representation including image URLs and nested reporter info."""
-    reporter = ReporterInfoSerializer(read_only=True) # Use nested serializer for reporter
+    reporter = ReporterInfoSerializer(read_only=True)
 
     class Meta:
         model = MissingPersonReport
-        # Include all model fields and nested reporter
         fields = [
-            'id',
-            'reporter', # Nested reporter details
-            'full_name', 'description', 'identification_marks',
-            'last_seen_location', 'reporter_contact_info',
-            'identity_card_image', # Will contain URL or null
-            'person_photo',        # Will contain URL or null
+            'id', 'reporter', 'full_name', 'age', 'gender', 'description',
+            'identification_marks', 'last_seen_location', 'state', 'district',
+            'disaster_type', 'reporter_contact_info', 'additional_info',
+            'identity_card_image', 'person_photo',
             'created_at', 'updated_at',
         ]
-        read_only_fields = fields # Primarily for display
+        read_only_fields = fields
