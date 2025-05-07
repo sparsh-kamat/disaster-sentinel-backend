@@ -3,7 +3,7 @@
 
 from django.http import JsonResponse, HttpRequest
 from django.views.decorators.http import require_http_methods
-from scraper import scrape_gdacs_event_data  # Import the scraping function from your scraper module
+from .scraper import scrape_gdacs_event_data  # Import the scraping function from your scraper module
 # from .scraper import scrape_gdacs_event_data # If scraper.py is in the same app directory
 # For this example, let's assume scrape_gdacs_event_data is defined in this file or imported correctly.
 # If you place the scraper function in a separate file like 'scraper.py' in the same app directory,
