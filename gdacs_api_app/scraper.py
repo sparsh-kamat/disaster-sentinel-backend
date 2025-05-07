@@ -159,37 +159,3 @@ def scrape_gdacs_event_data(event_url):
         "latest_headlines": latest_headlines,
         "db_news_updates": db_news_updates
     }
-
-# --- Django specific files ---
-
-
-# project_name/urls.py 
-# (Your main project's urls.py)
-
-from django.contrib import admin
-from django.urls import path, include
-
-urlpatterns = [
-    path('admin/', admin.site.urls),
-    # Include the URLs from your app (e.g., gdacs_api_app)
-    path('api/gdacs/', include('gdacs_api_app.urls')), 
-]
-
-
-# gdacs_api_app/urls.py 
-# (Create this file in your app directory 'gdacs_api_app')
-
-from django.urls import path
-from .views import scrape_gdacs_view
-
-urlpatterns = [
-    # Defines the endpoint: /api/gdacs/scrape/?url=<GDACS_EVENT_URL>
-    path('scrape/', scrape_gdacs_view, name='scrape_gdacs_event'),
-]
-
-# requirements.txt
-# Add these to your project's requirements.txt file
-
-# Django==x.y.z  (use your Django version)
-# requests==2.31.0 (or latest)
-# beautifulsoup4==4.12.3 (or latest)
