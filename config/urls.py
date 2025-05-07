@@ -11,4 +11,5 @@ urlpatterns = [
     path('', include('floodprediction.urls')),  # Include URLs from the 'floodprediction' app
     path('api/', include('floodstations.urls')),  # Include URLs from the 'floodstations' app
     path('api/', include('missingreport.urls')),  # Include URLs from the 'missingreport' app
+    path('api/gdacs/', include('gdacs_api_app.urls')), # Include URLs from the 'gdacs_api_app' app (for the GDACS API)
 ]

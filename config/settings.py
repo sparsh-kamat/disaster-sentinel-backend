@@ -69,6 +69,7 @@ INSTALLED_APPS = [
     'cloudinary_storage',
     'cloudinary',
     'missingreport',
+    'gdacs_api_app',
 ]
 
 MIDDLEWARE = [
