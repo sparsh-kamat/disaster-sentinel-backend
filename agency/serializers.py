@@ -310,7 +310,7 @@ class EventSerializer(serializers.ModelSerializer):
         model = Event
         fields = [
             'id', 'name', 'date', 'start_time', 'event_type', 'platform', 'meeting_link', 
-            'meeting_id', 'venue_name', 'address', 'city', 'state', 'attendees', 
+            'meeting_id', 'venue_name', 'address', 'district', 'state', 'attendees', 
             'reg_type', 'tags', 'description', 'location_type', 'timeline_items', 'user_id'
         ]
 
@@ -337,7 +337,7 @@ class EventSerializer(serializers.ModelSerializer):
         instance.meeting_id = validated_data.get('meeting_id', instance.meeting_id)
         instance.venue_name = validated_data.get('venue_name', instance.venue_name)
         instance.address = validated_data.get('address', instance.address)
-        instance.city = validated_data.get('city', instance.city)
+        instance.district = validated_data.get('district', instance.district)
         instance.state = validated_data.get('state', instance.state)
         instance.attendees = validated_data.get('attendees', instance.attendees)
         instance.reg_type = validated_data.get('reg_type', instance.reg_type)

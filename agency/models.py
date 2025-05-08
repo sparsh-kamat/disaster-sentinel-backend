@@ -231,7 +231,7 @@ class Event(models.Model):
     meeting_id = models.CharField(max_length=100, null=True, blank=True)
     venue_name = models.CharField(max_length=255, null=True, blank=True)
     address = models.CharField(max_length=255, null=True, blank=True)
-    city = models.CharField(max_length=100, null=True, blank=True)
+    district = models.CharField(max_length=100, null=True, blank=True)
     state = models.CharField(max_length=100, null=True, blank=True)
     attendees = models.IntegerField(null=True, blank=True)
     reg_type = models.CharField(max_length=50, choices=REG_TYPE_CHOICES)
