@@ -150,6 +150,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:8080",
     "http://localhost:5173",
     "https://localhost:5175",
+    "https://disastersentinel.netlify.app/",
     
 ]
 CORS_ALLOW_CREDENTIALS = True

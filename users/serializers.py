@@ -138,3 +138,14 @@ class UserProfileDetailSerializer(serializers.ModelSerializer):
             'state', 'district', 'lat', 'long'
         )
         read_only_fields = fields # Ensure it's only used for output
+        
+class resendEmailSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    
+    def validate(self, data):
+        email = data.get('email')
+        if not email:
+            raise serializers.ValidationError("Email is required")
+        return data
+    
+    

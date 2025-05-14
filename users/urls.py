@@ -5,7 +5,8 @@ from .views import (
     SearchUserByEmailView,
     UserProfileUpdateView,
     UserLocationUpdateView,
-    UserDetailView
+    UserDetailView,
+    ResendOTPView,
 )
 
 # users/urls.py (If you prefer 'signup')
@@ -18,6 +19,7 @@ urlpatterns = [
     path('auth/logout/', LogoutView.as_view(), name='user-logout'),
     path('auth/forgot-password/', ForgotPasswordView.as_view(), name='user-forgot-password'),
     path('auth/reset-password/', ResetPasswordView.as_view(), name='user-reset-password'),
+    path('auth/resend-otp/', ResendOTPView.as_view(), name='user-resend-otp'),
 
     # --- User API Actions ---
     path('api/users/search/', SearchUserByEmailView.as_view(), name='user-search'),
