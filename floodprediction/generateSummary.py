@@ -2,7 +2,7 @@ from google import genai
 from google.genai.types import Tool, GenerateContentConfig, GoogleSearch
 
 
-client = genai.Client(api_key="AIzaSyDhTxISQgZD39bXdFS8OM7kxV7dVbB0WvQ")
+client = genai.Client(api_key="AIzaSyAfKEa3ciCzs5UHe0MJW_z3c65cxAxUDvg")
 model_id = "gemini-2.0-flash-exp"
 
 google_search_tool = Tool(
