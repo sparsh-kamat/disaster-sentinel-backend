@@ -70,6 +70,11 @@ class MissingPersonReport(models.Model):
         help_text=_("Uploaded photo of the missing person.")
     )
     
+    # --- Fields for "Found" Status ---
+    is_found = models.BooleanField(default=False, db_index=True, help_text=_("Is the person marked as found?")) # <<< THIS WAS MISSING
+    found_date = models.DateField(null=True, blank=True, help_text=_("Date when the person was marked/confirmed found.")) # <<< THIS WAS MISSING
+    
+    
     FOUND_BY_CHOICES = [
         ('REPORTER', 'Reporter'),
         ('AGENCY', 'Agency'),
