@@ -4,12 +4,15 @@ from rest_framework.routers import DefaultRouter
 from .views import EventViewSet, ExistingAgenciesListView, VolunteerInterestViewSet, AgencyProfileViewSet, AgencyImageDeleteView
 from .views import AgencyPermissionListView, AgencyMemberPermissionManageView
 from .views import CheckVolunteerRequestStatusView
+from .views import EventInterestViewSet 
 
 # Create a router and register the EventViewSet with it
 router = DefaultRouter()
 router.register(r'events', EventViewSet , basename='event')
 router.register(r'volunteer-interests', VolunteerInterestViewSet, basename='volunteer-interest')
 router.register(r'agency-profiles', AgencyProfileViewSet, basename='agencyprofile')
+router.register(r'event-interests', EventInterestViewSet, basename='eventinterest') # <-- Register new ViewSet
+
 
 
 # Define the URL patterns for your agency app

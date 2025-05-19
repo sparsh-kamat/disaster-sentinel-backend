@@ -22,6 +22,7 @@ from .models import (
     ExistingAgencies,
     Event,
     VolunteerInterest,
+    EventInterest,
 )
 from .serializers import (
     AgencyProfileCreateSerializer,
@@ -34,7 +35,11 @@ from .serializers import (
     VolunteerInterestSubmitSerializer,
     VolunteerInterestListSerializer,
     VolunteerInterestUpdateSerializer,
+    EventInterestSerializer,
 )
+
+from django_filters.rest_framework import DjangoFilterBackend # Import DjangoFilterBackend
+
 
 User = get_user_model()
 
@@ -498,3 +503,78 @@ class ExistingAgenciesListView(generics.ListAPIView):
         
         return queryset
 # This will render the 'welcome.html' template
+
+
+# --- NEW VIEWSET FOR EVENT INTEREST ---
+class EventInterestViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint for users to express or withdraw interest in an event.
+    """
+    queryset = EventInterest.objects.all()
+    serializer_class = EventInterestSerializer
+    filter_backends = [DjangoFilterBackend] # Add DjangoFilterBackend
+    filterset_fields = ['user', 'event']    # Allow filtering on user and event ForeignKeys by their IDs
+
+    def get_queryset(self):
+        """
+        Optionally, ensure users can only see their own interest records
+        when listing without specific user/event filters for privacy,
+        unless they are admins or have specific permissions.
+        For a specific check (user+event), this is less critical as it's targeted.
+        """
+        # If you want to restrict general listing to the current user:
+        # return EventInterest.objects.filter(user=self.request.user)
+        # For now, allowing general filtering by ID as specified in filterset_fields.
+        return super().get_queryset()
+
+    def perform_create(self, serializer):
+        # SECURITY NOTE:
+        # It's highly recommended to use request.user instead of user_id from payload
+        # for actions tied to the logged-in user.
+        # Example: user = self.request.user
+        # However, to follow your current pattern of sending user_id:
+        user_id_from_payload = self.request.data.get('user_id')
+        event_id_from_payload = self.request.data.get('event_id')
+        interested_status = self.request.data.get('interested', False) # Default to False if not provided
+
+        if not user_id_from_payload or not event_id_from_payload:
+            raise serializers.ValidationError("Both 'user_id' and 'event_id' are required.")
+
+        try:
+            user = User.objects.get(id=user_id_from_payload)
+            # Security check: Ensure the user_id from payload matches the authenticated user
+            if user != self.request.user:
+                 raise serializers.ValidationError("You can only set interest for yourself.") # Or return 403 Forbidden
+        except User.DoesNotExist:
+            raise serializers.ValidationError(f"User with id {user_id_from_payload} does not exist.")
+
+        try:
+            event = Event.objects.get(id=event_id_from_payload)
+        except Event.DoesNotExist:
+            raise serializers.ValidationError(f"Event with id {event_id_from_payload} does not exist.")
+
+        # The serializer's create method now handles the update_or_create logic
+        serializer.save(user_id=user_id_from_payload, event_id=event_id_from_payload, interested=interested_status)
+
+    def create(self, request, *args, **kwargs):
+        """
+        Handles POST request to create or update an EventInterest.
+        Expects: {"user_id": <id>, "event_id": <id>, "interested": true/false}
+        """
+        # SECURITY NOTE: Ideally, use request.user.id for user_id.
+        # Forcing user_id to be the authenticated user if it's part of the payload:
+        # mutable_data = request.data.copy()
+        # mutable_data['user_id'] = request.user.id
+        # serializer = self.get_serializer(data=mutable_data)
+
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer) # This will call serializer.save() which calls serializer.create()
+        headers = self.get_success_headers(serializer.data)
+        # The serializer.data after save should reflect the created/updated object.
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    # You might not need standard list, retrieve, update, destroy for this model,
+    # if POST to create is used as an "upsert" (update or create).
+    # If you do, they will work by default.
+    # Consider overriding update if you want PUT to behave specifically.

@@ -234,6 +234,9 @@ class Event(models.Model):
     district = models.CharField(max_length=100, null=True, blank=True)
     state = models.CharField(max_length=100, null=True, blank=True)
     attendees = models.IntegerField(null=True, blank=True)
+    
+    
+    # --- END NEW FIELD ---
     reg_type = models.CharField(max_length=50, choices=REG_TYPE_CHOICES)
     description = models.TextField(null=True, blank=True)
     tags = models.JSONField(default=list)
@@ -244,6 +247,34 @@ class Event(models.Model):
     
     def __str__(self):
         return self.name
+
+
+# --- NEW MODEL FOR EVENT INTEREST ---
+class EventInterest(models.Model):
+    """
+    Model to track user interest in a specific event.
+    """
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='event_interests' # Users can have multiple event interests
+    )
+    event = models.ForeignKey(
+        Event, # Reference your existing Event model
+        on_delete=models.CASCADE,
+        related_name='interested_users' # Events can have multiple interested users
+    )
+    interested = models.BooleanField(default=False) # True if interested, False if not
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        # Ensures a user can only have one interest status per event
+        unique_together = ('user', 'event')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.user} - {self.event.name} - {'Interested' if self.interested else 'Not Interested'}"
 
 class ExistingAgencies(models.Model):
     id = models.AutoField(primary_key=True)  # Keep the primary key
