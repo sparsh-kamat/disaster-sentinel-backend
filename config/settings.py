@@ -10,6 +10,13 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
+
+# At the top, or with other AWS settings:
+SAGEMAKER_ENDPOINT_NAME = "flood-prediction-endpoint-2025-05-19-12-49-42" # Your endpoint name
+SAGEMAKER_AWS_REGION = "ap-south-1" # Your endpoint's region
+
+
+
 from pathlib import Path
 import os
 import dj_database_url

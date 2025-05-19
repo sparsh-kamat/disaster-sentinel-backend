@@ -73,8 +73,19 @@ def fetch_and_store_gdacs_disasters():
                 continue
 
             if GdacsDisasterEvent.objects.filter(eventid=event_id).exists():
-                print(f"ℹ️ Event {event_id} already exists, skipping.")
-                continue
+                # check if pubDate is already in the database and not null, if null then dont skip
+                existing_event = GdacsDisasterEvent.objects.get(eventid=event_id)
+                if existing_event.pubDate is  None:
+                    # check if pubDate is  null
+                    existing_event.pubDate = parse_date_safe(props.get('pubDate'))
+                    existing_event.save()
+                    print(f"✅ Updated pubDate for existing event {event_id}.")
+                    continue
+                    
+                else:
+                    # if pubDate is not null
+                    print(f"ℹ️ Event {event_id} already exists, skipping.")
+                    continue
 
             try:
                 detailed_event = reader.get_event(event_type=str(event_type), event_id=str(event_id))
