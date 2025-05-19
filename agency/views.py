@@ -285,6 +285,86 @@ class AgencyProfileViewSet(viewsets.ModelViewSet):
     # List uses AgencyProfileListSerializer.
     # Destroy works on the AgencyProfile.
 
+class CheckVolunteerRequestStatusView(APIView):
+    """
+    Checks if a user can submit a new volunteer request to a specific agency,
+    or if an existing request or agency membership (with permissions) already exists.
+    """
+    permission_classes = [permissions.AllowAny] # As per your project's current setup
+
+    def get(self, request, *args, **kwargs):
+        volunteer_id = request.query_params.get('volunteer_id')
+        agency_id = request.query_params.get('agency_id')
+
+        if not volunteer_id or not agency_id:
+            return Response(
+                {"error": "Both volunteer_id and agency_id query parameters are required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            volunteer_id = int(volunteer_id)
+            agency_id = int(agency_id)
+        except ValueError:
+            return Response(
+                {"error": "volunteer_id and agency_id must be integers."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            volunteer = get_object_or_404(User, pk=volunteer_id)
+            agency = get_object_or_404(User, pk=agency_id, role='agency')
+        except User.DoesNotExist:
+            return Response(
+                {"error": "Invalid volunteer_id or agency_id, or agency_id does not belong to an agency."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Check 1: Existing VolunteerInterest request
+        # You might want to filter for non-rejected requests if applicable
+        existing_volunteer_request = VolunteerInterest.objects.filter(
+            volunteer=volunteer,
+            agency=agency
+            # Consider adding: .exclude(status='REJECTED') if you have a status field
+        ).first()
+
+        if existing_volunteer_request:
+            return Response({
+                "can_submit_new_request": False,
+                "reason_code": "EXISTING_VOLUNTEER_REQUEST",
+                "message": "An active or pending volunteer request already exists for this agency.",
+                "existing_request_details": {
+                    "id": existing_volunteer_request.id,
+                    "submitted_at": existing_volunteer_request.submitted_at,
+                    "is_accepted": existing_volunteer_request.is_accepted
+                }
+            }, status=status.HTTP_200_OK)
+
+        # Check 2: Existing AgencyMemberPermission
+        existing_permission = AgencyMemberPermission.objects.filter(
+            member=volunteer,
+            agency=agency
+        ).first()
+
+        if existing_permission:
+            return Response({
+                "can_submit_new_request": False,
+                "reason_code": "ALREADY_AGENCY_MEMBER",
+                "message": "This user is already associated with the agency and has defined permissions.",
+                "member_permission_details": {
+                    "granted_at": existing_permission.granted_at,
+                    # Add any relevant permission flags if needed, e.g.:
+                    # "is_agency_admin": existing_permission.is_agency_admin
+                }
+            }, status=status.HTTP_200_OK)
+
+        # If neither condition is met, the user can submit a new request
+        return Response({
+            "can_submit_new_request": True,
+            "reason_code": "ALLOW_NEW",
+            "message": "User can submit a new volunteer request."
+        }, status=status.HTTP_200_OK)
+
 
 class AgencyImageDeleteView(APIView):
     """
