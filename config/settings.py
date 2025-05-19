@@ -12,8 +12,8 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 
 
 # At the top, or with other AWS settings:
-SAGEMAKER_ENDPOINT_NAME = "flood-prediction-endpoint-2025-05-19-12-49-42" # Your endpoint name
-SAGEMAKER_AWS_REGION = "ap-south-1" # Your endpoint's region
+# SAGEMAKER_ENDPOINT_NAME = "flood-prediction-endpoint-2025-05-19-12-49-42" # Your endpoint name
+
 
 
 
@@ -31,6 +31,10 @@ load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+SAGEMAKER_ENDPOINT_NAME =os.getenv('SAGEMAKER_ENDPOINT_NAME')
+SAGEMAKER_AWS_REGION =os.getenv('SAGEMAKER_AWS_REGION')
+
 
 cloudinary.config(
     cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
