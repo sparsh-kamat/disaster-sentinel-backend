@@ -223,6 +223,61 @@ class AgencyProfileViewSet(viewsets.ModelViewSet):
             print(f"Error creating AgencyProfile: {e}") # Basic logging
             return Response({'error':'An internal server error occurred.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    @transaction.atomic # Ensure atomicity for profile text and new image updates
+    def partial_update(self, request, *args, **kwargs):
+        """
+        Override partial_update to handle updates to text fields
+        AND allow adding new images.
+        """
+        instance = self.get_object() # Get the AgencyProfile instance
+
+        # --- Handle Text Field Updates ---
+        # We only want to pass non-file data to AgencyProfileUpdateSerializer
+        profile_text_data = {}
+        has_text_data_to_update = False
+        for key in request.data:
+            if key not in request.FILES: # Check if the key is not for a file
+                profile_text_data[key] = request.data[key]
+                has_text_data_to_update = True
+        
+        if has_text_data_to_update:
+            # Use AgencyProfileUpdateSerializer for the text fields
+            profile_serializer = AgencyProfileUpdateSerializer(instance, data=profile_text_data, partial=True)
+            try:
+                profile_serializer.is_valid(raise_exception=True)
+                profile_serializer.save() # Save changes to text fields
+            except serializers.ValidationError as e:
+                return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
+            except Exception as e: # Catch other potential errors during profile save
+                print(f"Error updating AgencyProfile text fields: {e}")
+                return Response(
+                    {'error':'An error occurred while updating profile details.'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+        
+        # --- Handle Adding New Images ---
+        # The key 'images' should match what the frontend sends in FormData
+        new_images_data = request.FILES.getlist('images')
+        if new_images_data:
+            for image_data in new_images_data:
+                try:
+                    AgencyImage.objects.create(agency_profile=instance, image=image_data)
+                except Exception as e: # Catch errors during image creation/upload
+                    print(f"Error creating AgencyImage: {e}")
+                    # Decide on error handling: continue, or return error for the whole request?
+                    # For now, let's return an error if any image fails.
+                    return Response(
+                        {'error': f'An error occurred while uploading new image: {image_data.name}.'},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    )
+        
+        # Refresh the instance from DB to get all updates including newly added images
+        instance.refresh_from_db()
+        
+        # Return the full updated profile using the Detail serializer
+        detail_serializer = AgencyProfileDetailSerializer(instance, context=self.get_serializer_context())
+        return Response(detail_serializer.data, status=status.HTTP_200_OK)
+
     # Default methods for retrieve, update, partial_update, destroy will now use
     # the serializers selected by get_serializer_class.
     # Update/Partial Update uses AgencyProfileUpdateSerializer.
