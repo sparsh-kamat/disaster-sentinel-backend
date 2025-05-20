@@ -350,14 +350,15 @@ class EventSerializer(serializers.ModelSerializer):
         return instance
     
     
-# NEW SERIALIZER FOR EVENT INTEREST ---
 class EventInterestSerializer(serializers.ModelSerializer):
-    # To accept IDs from the frontend, following your pattern
     user_id = serializers.IntegerField(write_only=True)
     event_id = serializers.IntegerField(write_only=True)
 
-    # For readable responses
-    user_username = serializers.CharField(source='user.username', read_only=True) # Assuming username field
+    # Changed source to 'user.email' or 'user.full_name'
+    user_identifier = serializers.CharField(source='user.email', read_only=True) # Option 1: Use email
+    # OR
+    # user_identifier = serializers.CharField(source='user.full_name', read_only=True) # Option 2: Use full_name
+
     event_name = serializers.CharField(source='event.name', read_only=True)
 
     class Meta:
@@ -366,13 +367,13 @@ class EventInterestSerializer(serializers.ModelSerializer):
             'id',
             'user_id',      # For input
             'event_id',     # For input
-            'user_username',# For output
+            'user_identifier', # Changed from user_username, for output
             'event_name',   # For output
             'interested',
             'created_at',
             'updated_at'
         ]
-        read_only_fields = ['id', 'user_username', 'event_name', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'user_identifier', 'event_name', 'created_at', 'updated_at']
 
     def create(self, validated_data):
         user_id_from_input = validated_data.pop('user_id')
@@ -389,7 +390,6 @@ class EventInterestSerializer(serializers.ModelSerializer):
         except Event.DoesNotExist:
             raise serializers.ValidationError({"event_id": f"Event with id {event_id_from_input} does not exist."})
 
-        # Use update_or_create to handle setting/updating interest
         interest_obj, created = EventInterest.objects.update_or_create(
             user=user,
             event=event,
@@ -398,8 +398,6 @@ class EventInterestSerializer(serializers.ModelSerializer):
         return interest_obj
 
     def update(self, instance, validated_data):
-        # Generally, for this use case, POST to create/update is simpler.
-        # If you specifically want PUT to update an existing interest record:
         instance.interested = validated_data.get('interested', instance.interested)
         instance.save()
         return instance
