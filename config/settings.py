@@ -167,7 +167,14 @@ CORS_ALLOWED_ORIGINS = [
 ]
 CORS_ALLOW_CREDENTIALS = True
 
-
+# CSRF Configuration - THIS IS KEY FOR YOUR ERROR
+CSRF_TRUSTED_ORIGINS = [
+    "https://disaster-sentinel-backend-26d3102ae035.herokuapp.com", # Your backend domain
+    "https://localhost:5173",  # Your local frontend dev server (HTTPS, as per error)
+    "http://localhost:5173",   # Your local frontend dev server (HTTP, just in case)
+    "https://disastersentinel.netlify.app", # Your production frontend
+    # Add any other specific domains that need to make POST/PATCH requests
+]
 
 # Email Configuration
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
@@ -194,19 +201,19 @@ options.pop('sslmode', None)
 #     SESSION_COOKIE_SAMESITE = 'None'  # Required for cross-origin requests
 #     SESSION_COOKIE_SECURE = False      # Required when using HTTPS
 
-CORS_ALLOWED_ORIGINS = [
-    "http://*",
-    "https://*",]
+# CORS_ALLOWED_ORIGINS = [
+#     "http://*",
+#     "https://*",]
 
-CORS_ORIGIN_WHITELIST = [
-    "http://*",
-    "https://*",]
+# CORS_ORIGIN_WHITELIST = [
+#     "http://*",
+#     "https://*",]
 
-CSRF_TRUSTED_ORIGINS = [
-        "http://*",
-        "https://*",]
+# CSRF_TRUSTED_ORIGINS = [
+#         "http://*",
+#         "https://*",]
 
-CORS_ALLOW_ALL_ORIGINS = True
+# CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 SESSION_COOKIE_SAMESITE = 'None'
 SESSION_COOKIE_SECURE = True
