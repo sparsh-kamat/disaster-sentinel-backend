@@ -3,6 +3,9 @@
 from rest_framework import viewsets, status, permissions, serializers
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser # <--- ADD JSONParser
+from rest_framework.decorators import action, parser_classes as action_parser_classes # <--- ADD THIS
+from django.utils import timezone # Ensure this is imported
 from django.shortcuts import get_object_or_404
 from django.db import transaction
 from rest_framework.decorators import action
@@ -104,6 +107,7 @@ class MissingPersonReportViewSet(viewsets.ModelViewSet):
     
     # Custom action for the original reporter to mark as found
     @action(detail=True, methods=['post'], url_path='reporter-mark-found')
+    @action_parser_classes([JSONParser]) # <--- ADD THIS DECORATOR
     def reporter_mark_found(self, request, pk=None):
         report = self.get_object()
         # !!! In a real app, add permission check: if request.user != report.reporter: return 403
