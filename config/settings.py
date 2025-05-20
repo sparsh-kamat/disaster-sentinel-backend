@@ -206,6 +206,9 @@ CSRF_TRUSTED_ORIGINS = [
         "https://*",]
 
 CORS_ALLOW_ALL_ORIGINS = True
+# aallow csrf all origins
+# allow all origins
+
 CORS_ALLOW_CREDENTIALS = True
 SESSION_COOKIE_SAMESITE = 'None'
 SESSION_COOKIE_SECURE = True
