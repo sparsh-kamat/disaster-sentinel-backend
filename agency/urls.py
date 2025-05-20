@@ -5,7 +5,6 @@ from .views import EventViewSet, ExistingAgenciesListView, VolunteerInterestView
 from .views import AgencyPermissionListView, AgencyMemberPermissionManageView
 from .views import CheckVolunteerRequestStatusView
 from .views import EventInterestViewSet 
-from .views import EventInterestedCountView
 
 # Create a router and register the EventViewSet with it
 router = DefaultRouter()
@@ -34,7 +33,6 @@ urlpatterns = [
     path('volunteer-interest/check-status/',
          CheckVolunteerRequestStatusView.as_view(),
          name='check_volunteer_request_status'),
-    path('events/<int:event_pk>/interested-count/', EventInterestedCountView.as_view(), name='event-interested-count'),
 
 
     path('', include(router.urls)),  # This will route '/events/'
