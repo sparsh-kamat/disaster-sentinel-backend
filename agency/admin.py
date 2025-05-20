@@ -8,7 +8,9 @@ from .models import (
     ExistingAgencies,
     AgencyProfile,
     AgencyImage,
-    VolunteerInterest
+    VolunteerInterest,
+    Event,
+    EventInterest,
 )
 # Import utility for displaying images if needed (optional, requires extra setup sometimes)
 # from django.utils.html import format_html
@@ -16,6 +18,26 @@ from .models import (
 # Get the Custom User model defined in settings.AUTH_USER_MODEL
 # Useful if searching/filtering based on user fields not directly on the profile
 User = settings.AUTH_USER_MODEL
+
+
+@admin.register(Event)
+class EventAdmin(admin.ModelAdmin):
+    list_display = ('name', 'user_id', 'date', 'event_type', 'location_type', 'reg_type')
+    list_filter = ('event_type', 'location_type', 'reg_type', 'state', 'date')
+    search_fields = ('name', 'description', 'user_id__full_name', 'user_id__email')
+    date_hierarchy = 'date'
+    # You can customize readonly_fields, fieldsets, etc. as needed
+
+@admin.register(EventInterest)
+class EventInterestAdmin(admin.ModelAdmin):
+    list_display = ('user', 'event', 'interested', 'created_at', 'updated_at')
+    list_filter = ('interested', 'event__name', 'user__email')
+    search_fields = ('user__email', 'user__full_name', 'event__name')
+    autocomplete_fields = ['user', 'event'] # Makes user and event fields searchable dropdowns
+
+    def get_queryset(self, request):
+        # Optimize query by prefetching related user and event details
+        return super().get_queryset(request).select_related('user', 'event')
 
 # --- Inline Admin for Agency Images ---
 class AgencyImageInline(admin.TabularInline):
