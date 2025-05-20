@@ -576,3 +576,47 @@ class EventInterestViewSet(viewsets.ModelViewSet):
     # to also rely only on payload ID without checking request.user), you would override them.
     # However, your EventInterestSerializer.create uses update_or_create, so POST
     # effectively handles both creation and update of the interest status.
+
+class EventInterestedCountView(APIView):
+    """
+    API endpoint to get the count of users who have marked themselves
+    as interested (interested=True) for a specific event.
+    """
+    # Set appropriate permission classes. For example:
+    # permission_classes = [AllowAny]  # If the count is public
+    # permission_classes = [IsAuthenticated] # If only authenticated users can see the count
+
+    def get(self, request, event_pk, format=None):
+        """
+        Handles GET requests to retrieve the interested users count for an event.
+        """
+        try:
+            # Retrieve the specific event using the event_pk from the URL
+            event = get_object_or_404(Event, pk=event_pk)
+        except Event.DoesNotExist: # get_object_or_404 raises Http404, which DRF handles
+            return Response({'error': 'Event not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Query the EventInterest model to count users interested in this event
+        # Filters for records linked to the specific 'event' and where 'interested' is True
+        interested_count = EventInterest.objects.filter(event=event, interested=True).count()
+
+        # Prepare the response data
+        response_data = {
+            'event_id': event.pk,
+            'event_name': event.name, # Optional: include event name for context
+            'interested_users_count': interested_count
+        }
+
+        return Response(response_data, status=status.HTTP_200_OK)
+
+# Make sure your Event and EventInterest models are defined correctly.
+# Example (ensure these match your actual models):
+# class Event(models.Model):
+#     name = models.CharField(max_length=255)
+#     # ... other fields ...
+#
+# class EventInterest(models.Model):
+#     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+#     event = models.ForeignKey(Event, on_delete=models.CASCADE)
+#     interested = models.BooleanField(default=False)
+#     # ... other fields ...
