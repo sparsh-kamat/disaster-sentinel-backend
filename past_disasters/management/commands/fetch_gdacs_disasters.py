@@ -14,7 +14,7 @@ GDACS_FEED_URL = "https://www.gdacs.org/xml/rss.xml"
 # Namespace mappings
 NS = {
     'geo': "http://www.w3.org/2003/01/geo/wgs84_pos#",
-    'gdacs': "http://www.gdacs.org",+-++
+    'gdacs': "http://www.gdacs.org",
     'georss': "http://www.georss.org/georss",
 }
 
