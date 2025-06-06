@@ -22,6 +22,7 @@ from .models import (
     ExistingAgencies,
     Event,
     VolunteerInterest,
+    EventInterest,
 )
 from .serializers import (
     AgencyProfileCreateSerializer,
@@ -34,7 +35,11 @@ from .serializers import (
     VolunteerInterestSubmitSerializer,
     VolunteerInterestListSerializer,
     VolunteerInterestUpdateSerializer,
+    EventInterestSerializer,
 )
+
+from django_filters.rest_framework import DjangoFilterBackend # Import DjangoFilterBackend
+
 
 User = get_user_model()
 
@@ -223,12 +228,147 @@ class AgencyProfileViewSet(viewsets.ModelViewSet):
             print(f"Error creating AgencyProfile: {e}") # Basic logging
             return Response({'error':'An internal server error occurred.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    @transaction.atomic # Ensure atomicity for profile text and new image updates
+    def partial_update(self, request, *args, **kwargs):
+        """
+        Override partial_update to handle updates to text fields
+        AND allow adding new images.
+        """
+        instance = self.get_object() # Get the AgencyProfile instance
+
+        # --- Handle Text Field Updates ---
+        # We only want to pass non-file data to AgencyProfileUpdateSerializer
+        profile_text_data = {}
+        has_text_data_to_update = False
+        for key in request.data:
+            if key not in request.FILES: # Check if the key is not for a file
+                profile_text_data[key] = request.data[key]
+                has_text_data_to_update = True
+        
+        if has_text_data_to_update:
+            # Use AgencyProfileUpdateSerializer for the text fields
+            profile_serializer = AgencyProfileUpdateSerializer(instance, data=profile_text_data, partial=True)
+            try:
+                profile_serializer.is_valid(raise_exception=True)
+                profile_serializer.save() # Save changes to text fields
+            except serializers.ValidationError as e:
+                return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
+            except Exception as e: # Catch other potential errors during profile save
+                print(f"Error updating AgencyProfile text fields: {e}")
+                return Response(
+                    {'error':'An error occurred while updating profile details.'},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+        
+        # --- Handle Adding New Images ---
+        # The key 'images' should match what the frontend sends in FormData
+        new_images_data = request.FILES.getlist('images')
+        if new_images_data:
+            for image_data in new_images_data:
+                try:
+                    AgencyImage.objects.create(agency_profile=instance, image=image_data)
+                except Exception as e: # Catch errors during image creation/upload
+                    print(f"Error creating AgencyImage: {e}")
+                    # Decide on error handling: continue, or return error for the whole request?
+                    # For now, let's return an error if any image fails.
+                    return Response(
+                        {'error': f'An error occurred while uploading new image: {image_data.name}.'},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    )
+        
+        # Refresh the instance from DB to get all updates including newly added images
+        instance.refresh_from_db()
+        
+        # Return the full updated profile using the Detail serializer
+        detail_serializer = AgencyProfileDetailSerializer(instance, context=self.get_serializer_context())
+        return Response(detail_serializer.data, status=status.HTTP_200_OK)
+
     # Default methods for retrieve, update, partial_update, destroy will now use
     # the serializers selected by get_serializer_class.
     # Update/Partial Update uses AgencyProfileUpdateSerializer.
     # Retrieve uses AgencyProfileDetailSerializer.
     # List uses AgencyProfileListSerializer.
     # Destroy works on the AgencyProfile.
+
+class CheckVolunteerRequestStatusView(APIView):
+    """
+    Checks if a user can submit a new volunteer request to a specific agency,
+    or if an existing request or agency membership (with permissions) already exists.
+    """
+    permission_classes = [permissions.AllowAny] # As per your project's current setup
+
+    def get(self, request, *args, **kwargs):
+        volunteer_id = request.query_params.get('volunteer_id')
+        agency_id = request.query_params.get('agency_id')
+
+        if not volunteer_id or not agency_id:
+            return Response(
+                {"error": "Both volunteer_id and agency_id query parameters are required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            volunteer_id = int(volunteer_id)
+            agency_id = int(agency_id)
+        except ValueError:
+            return Response(
+                {"error": "volunteer_id and agency_id must be integers."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            volunteer = get_object_or_404(User, pk=volunteer_id)
+            agency = get_object_or_404(User, pk=agency_id, role='agency')
+        except User.DoesNotExist:
+            return Response(
+                {"error": "Invalid volunteer_id or agency_id, or agency_id does not belong to an agency."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Check 1: Existing VolunteerInterest request
+        # You might want to filter for non-rejected requests if applicable
+        existing_volunteer_request = VolunteerInterest.objects.filter(
+            volunteer=volunteer,
+            agency=agency
+            # Consider adding: .exclude(status='REJECTED') if you have a status field
+        ).first()
+
+        if existing_volunteer_request:
+            return Response({
+                "can_submit_new_request": False,
+                "reason_code": "EXISTING_VOLUNTEER_REQUEST",
+                "message": "An active or pending volunteer request already exists for this agency.",
+                "existing_request_details": {
+                    "id": existing_volunteer_request.id,
+                    "submitted_at": existing_volunteer_request.submitted_at,
+                    "is_accepted": existing_volunteer_request.is_accepted
+                }
+            }, status=status.HTTP_200_OK)
+
+        # Check 2: Existing AgencyMemberPermission
+        existing_permission = AgencyMemberPermission.objects.filter(
+            member=volunteer,
+            agency=agency
+        ).first()
+
+        if existing_permission:
+            return Response({
+                "can_submit_new_request": False,
+                "reason_code": "ALREADY_AGENCY_MEMBER",
+                "message": "This user is already associated with the agency and has defined permissions.",
+                "member_permission_details": {
+                    "granted_at": existing_permission.granted_at,
+                    # Add any relevant permission flags if needed, e.g.:
+                    # "is_agency_admin": existing_permission.is_agency_admin
+                }
+            }, status=status.HTTP_200_OK)
+
+        # If neither condition is met, the user can submit a new request
+        return Response({
+            "can_submit_new_request": True,
+            "reason_code": "ALLOW_NEW",
+            "message": "User can submit a new volunteer request."
+        }, status=status.HTTP_200_OK)
 
 
 class AgencyImageDeleteView(APIView):
@@ -363,3 +503,46 @@ class ExistingAgenciesListView(generics.ListAPIView):
         
         return queryset
 # This will render the 'welcome.html' template
+
+
+class EventInterestViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint for managing user interest in events.
+    - POST to create/update interest (expects user_id_input, event_id_input, interested).
+    - GET /?user=<user_id> to view interests for a particular person.
+    - GET /?event=<event_id> to view interests for a particular event.
+    - DELETE /<interest_id>/ to delete an interest record.
+
+    SECURITY NOTE: This ViewSet currently uses AllowAny permissions.
+    It relies on user_id being sent in the payload for creation.
+    This is less secure than session/token-based authentication where the
+    backend identifies the user from an authenticated request.
+    Consider adding appropriate authentication and permission checks if needed.
+    """
+    queryset = EventInterest.objects.select_related('user', 'event').all()
+    serializer_class = EventInterestSerializer
+    permission_classes = [permissions.AllowAny] # Allows access without authentication
+                                                # Change this if you implement auth for these endpoints.
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = {
+        'user': ['exact'],    # Allows filtering like /api/event-interests/?user=298
+        'event': ['exact'],   # Allows filtering like /api/event-interests/?event=74
+    }
+
+    # The default create(), retrieve(), update(), partial_update(), destroy() methods
+    # from ModelViewSet will largely work with the serializer defined.
+    # The serializer's create method handles the "upsert" logic for POST.
+
+    # Example of how the create method from ModelViewSet would call the serializer:
+    # def create(self, request, *args, **kwargs):
+    #     serializer = self.get_serializer(data=request.data)
+    #     serializer.is_valid(raise_exception=True)
+    #     self.perform_create(serializer) # This calls serializer.save() -> serializer.create()
+    #     headers = self.get_success_headers(serializer.data)
+    #     return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    # No custom perform_create is strictly needed if the serializer handles ID to instance conversion.
+    # The serializer.create method will be called by serializer.save() in the default implementation.
+
+    # Deletion is handled by the default destroy method using the PK of the EventInterest record.
+    # Example: DELETE /api/event-interests/10/ (where 10 is the ID of the EventInterest record)

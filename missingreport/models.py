@@ -69,6 +69,48 @@ class MissingPersonReport(models.Model):
         'missing_persons/photos',
         help_text=_("Uploaded photo of the missing person.")
     )
+    
+    # --- Fields for "Found" Status ---
+    is_found = models.BooleanField(default=False, db_index=True, help_text=_("Is the person marked as found?")) # <<< THIS WAS MISSING
+    found_date = models.DateField(null=True, blank=True, help_text=_("Date when the person was marked/confirmed found.")) # <<< THIS WAS MISSING
+    
+    
+    FOUND_BY_CHOICES = [
+        ('REPORTER', 'Reporter'),
+        ('AGENCY', 'Agency'),
+        ('OTHER', 'Other/Unknown'),
+    ]
+    marked_found_by_type = models.CharField(
+        max_length=10,
+        choices=FOUND_BY_CHOICES,
+        null=True, blank=True,
+        help_text=_("Who marked the person as found (reporter or agency).")
+    )
+    marked_found_by_user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='marked_reports_as_found',
+        help_text=_("The specific user/agency who marked this report as found.")
+    )
+
+    # --- Agency-Specific "Found" Details ---
+    CONDITION_CHOICES = [
+        ('ALIVE', 'Alive and Well'),
+        ('INJURED', 'Injured'),
+        ('DECEASED', 'Deceased'),
+        ('UNKNOWN', 'Condition Unknown'),
+    ]
+    agency_found_location = models.TextField(null=True, blank=True, help_text=_("Location where agency found the person."))
+    agency_current_location_of_person = models.TextField(null=True, blank=True, help_text=_("Current location of the person if different, as per agency."))
+    agency_person_condition = models.CharField(
+        max_length=20,
+        choices=CONDITION_CHOICES,
+        null=True, blank=True,
+        help_text=_("Condition of the person when found by agency.")
+    )
+    agency_found_notes = models.TextField(null=True, blank=True, help_text=_("Additional notes from the agency regarding finding the person."))
+
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

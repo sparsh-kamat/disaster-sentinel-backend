@@ -7,7 +7,7 @@ def get_disaster_images(query, num_images=10):
     """
     """Fetches disaster-related image URLs using SerpAPI."""
     
-    api_key = "2a647f362842e169485ded92539033c0810cf5ab93498c8e8b709927e79c1f3a"  # Replace with your SerpAPI key
+    api_key = "12abaa13b679b1e8be242c795ab06d3c402b700b306004af0c13adb5aab33eea"  # Replace with your SerpAPI key
 
     params = {
         "q": query,

@@ -10,6 +10,13 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
+
+# At the top, or with other AWS settings:
+# SAGEMAKER_ENDPOINT_NAME = "flood-prediction-endpoint-2025-05-19-12-49-42" # Your endpoint name
+
+
+
+
 from pathlib import Path
 import os
 import dj_database_url
@@ -24,6 +31,10 @@ load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+SAGEMAKER_ENDPOINT_NAME =os.getenv('SAGEMAKER_ENDPOINT_NAME')
+SAGEMAKER_AWS_REGION =os.getenv('SAGEMAKER_AWS_REGION')
+
 
 cloudinary.config(
     cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
@@ -56,7 +67,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    
+    'django_filters',
     'sslserver',
     'rest_framework',
     'rest_framework.authtoken',
@@ -150,10 +161,11 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:8080",
     "http://localhost:5173",
     "https://localhost:5175",
+    "https://localhost:5173",
+    "https://disastersentinel.netlify.app/",
     
 ]
 CORS_ALLOW_CREDENTIALS = True
-
 
 
 # Email Configuration
@@ -194,6 +206,9 @@ CSRF_TRUSTED_ORIGINS = [
         "https://*",]
 
 CORS_ALLOW_ALL_ORIGINS = True
+# aallow csrf all origins
+# allow all origins
+
 CORS_ALLOW_CREDENTIALS = True
 SESSION_COOKIE_SAMESITE = 'None'
 SESSION_COOKIE_SECURE = True

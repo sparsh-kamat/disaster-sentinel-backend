@@ -4,7 +4,7 @@ from .models import Event
 from .models import VolunteerInterest
 from .models import AgencyProfile
 from .models import AgencyImage
-
+from .models import EventInterest
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
@@ -348,3 +348,81 @@ class EventSerializer(serializers.ModelSerializer):
 
         instance.save()
         return instance
+    
+    
+
+class BasicUserSerializer(serializers.ModelSerializer):
+    """
+    Serializer for basic user information (read-only).
+    """
+    class Meta:
+        model = User
+        fields = ['id', 'full_name', 'email'] # Adjust fields as needed
+        read_only_fields = fields
+
+class BasicEventSerializer(serializers.ModelSerializer):
+    """
+    Serializer for basic event information (read-only).
+    """
+    class Meta:
+        model = Event
+        fields = ['id', 'name', 'date', 'event_type'] # Adjust fields as needed
+        read_only_fields = fields
+        
+# agency/serializers.py (continued)
+
+class EventInterestSerializer(serializers.ModelSerializer):
+    # For readable responses, use the basic serializers
+    user = BasicUserSerializer(read_only=True)
+    event = BasicEventSerializer(read_only=True)
+
+    # For input when creating/updating, accept IDs
+    user_id_input = serializers.IntegerField(write_only=True, source='user_id_val') # Use a different source name
+    event_id_input = serializers.IntegerField(write_only=True, source='event_id_val') # Use a different source name
+
+    class Meta:
+        model = EventInterest
+        fields = [
+            'id',
+            'user',             # Read-only nested object for GET
+            'event',            # Read-only nested object for GET
+            'user_id_input',    # Write-only field for POST/PUT user ID
+            'event_id_input',   # Write-only field for POST/PUT event ID
+            'interested',
+            'created_at',
+            'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at'] # user and event are handled by their serializers
+
+    def create(self, validated_data):
+        user_id = validated_data.pop('user_id_val')
+        event_id = validated_data.pop('event_id_val')
+        interested_status = validated_data.get('interested', True) # Default to True if creating
+
+        try:
+            user_instance = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            raise serializers.ValidationError({"user_id_input": f"User with id {user_id} does not exist."})
+
+        try:
+            event_instance = Event.objects.get(id=event_id)
+        except Event.DoesNotExist:
+            raise serializers.ValidationError({"event_id_input": f"Event with id {event_id} does not exist."})
+
+        # Use update_or_create to handle both new interests and updates to existing ones
+        interest_obj, created = EventInterest.objects.update_or_create(
+            user=user_instance,
+            event=event_instance,
+            defaults={'interested': interested_status}
+        )
+        return interest_obj
+
+    def update(self, instance, validated_data):
+        # user_id and event_id are not typically changed on update for an existing interest record.
+        # The primary key of EventInterest (instance.id) identifies the record.
+        # We only update the 'interested' status.
+        instance.interested = validated_data.get('interested', instance.interested)
+        instance.save()
+        return instance
+    
+    

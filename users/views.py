@@ -31,6 +31,7 @@ from .serializers import (
     UserSearchSerializer,
     VerifyUserSerializer,
     UserPermissionDetailSerializer,
+    resendEmailSerializer,
 )
 
 from agency.models import AgencyMemberPermission # Assuming permissions model is in agency app
@@ -42,6 +43,8 @@ class PasswordResetTokenGenerator(PasswordResetTokenGenerator):
 
 password_reset_token_generator = PasswordResetTokenGenerator()
 
+
+    
 class ForgotPasswordView(APIView):
     def post(self, request):
         serializer = ForgotPasswordRequestSerializer(data=request.data)
@@ -292,6 +295,52 @@ class RegisterView(APIView):
                         status=status.HTTP_201_CREATED)
 
 
+# resend otp email
+class ResendOTPView(APIView):
+    def post(self,request):
+        serializer = resendEmailSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        email = serializer.validated_data['email']
+
+        # Check if the user exists
+        try:
+            user = CustomUser.objects.get(email=email)
+        except CustomUser.DoesNotExist:
+            return Response({'error': 'User with this email does not exist'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Generate a new OTP
+        otp = random.randint(100000, 999999)
+        otp_expiry_time = timezone.now() + datetime.timedelta(minutes=10)
+        
+                # Delete any old OTP record for this email first
+        OTPStorage.objects.filter(email=email).delete()
+
+        # Create the new OTP record
+        OTPStorage.objects.create(
+            email=email,
+            otp=str(otp), # Store OTP as string
+            expires_at=otp_expiry_time
+        )
+        print(f"DEBUG: OTP for {email} stored in DB. Expires at: {otp_expiry_time}")
+
+        try:
+            send_mail(
+                'Disaster Sentinel - Account Verification',
+                f'Your OTP is {otp}',
+                settings.DEFAULT_FROM_EMAIL,
+                [email],
+                fail_silently=False,
+            )
+        except Exception as e:
+            return Response({'error': 'Failed to send OTP'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response({'message': ' OTP sent to email.'}, 
+                        status=status.HTTP_201_CREATED)
+        
+    
+    
 # class VerifyOTPView(APIView):
 #     def post(self, request):
 #         serializer = VerifyUserSerializer(data=request.data)

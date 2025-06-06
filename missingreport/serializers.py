@@ -57,12 +57,44 @@ class MissingPersonReportCreateSerializer(serializers.ModelSerializer):
         if not CustomUser.objects.filter(pk=value).exists():
             raise serializers.ValidationError("User with the provided reporter_id does not exist.")
         return value
+    
+# --- Serializer for User to Update Additional Info ---
+class MissingPersonReportUpdateInfoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MissingPersonReport
+        fields = ['additional_info'] # Only this field can be updated
+   
+   
+# --- Serializer for Agency to Mark Person as Found ---
+class AgencyMarkFoundSerializer(serializers.ModelSerializer):
+    # We expect agency to provide these details
+    agency_found_location = serializers.CharField(required=True)
+    agency_current_location_of_person = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    agency_person_condition = serializers.ChoiceField(choices=MissingPersonReport.CONDITION_CHOICES, required=True)
+    found_date = serializers.DateField(required=True) # Agency provides this
+    agency_found_notes = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+
+    class Meta:
+        model = MissingPersonReport
+        fields = [
+            'agency_found_location',
+            'agency_current_location_of_person',
+            'agency_person_condition',
+            'found_date',
+            'agency_found_notes',
+            # is_found will be set to True in the view
+        ]
+
+
+   
 
 # --- Serializer for Listing Reports (Concise) ---
 class MissingPersonReportListSerializer(serializers.ModelSerializer):
     reporter_email = serializers.EmailField(source='reporter.email', read_only=True, allow_null=True)
     has_identity_card = serializers.SerializerMethodField(read_only=True)
     has_person_photo = serializers.SerializerMethodField(read_only=True)
+    # Add is_found status
+    is_found = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = MissingPersonReport
@@ -70,7 +102,7 @@ class MissingPersonReportListSerializer(serializers.ModelSerializer):
             'id', 'full_name', 'age', 'gender', # Added age, gender
             'reporter_email', 'last_seen_location', 'state', 'district', # Added state, district
             'disaster_type', # Added disaster_type
-            'created_at', 'has_identity_card', 'has_person_photo'
+            'created_at', 'has_identity_card', 'has_person_photo', 'is_found',
         ]
         read_only_fields = fields
 
@@ -83,6 +115,8 @@ class MissingPersonReportListSerializer(serializers.ModelSerializer):
 # --- Serializer for Report Details (With Image URLs & Reporter) ---
 class MissingPersonReportDetailSerializer(serializers.ModelSerializer):
     reporter = ReporterInfoSerializer(read_only=True)
+    marked_found_by_user_email = serializers.EmailField(source='marked_found_by_user.email', read_only=True, allow_null=True)
+
 
     class Meta:
         model = MissingPersonReport
@@ -92,5 +126,10 @@ class MissingPersonReportDetailSerializer(serializers.ModelSerializer):
             'disaster_type', 'reporter_contact_info', 'additional_info',
             'identity_card_image', 'person_photo',
             'created_at', 'updated_at',
+            # "Found" details
+            'is_found', 'found_date', 'marked_found_by_type',
+            'marked_found_by_user_email', # Show email of user who marked found
+            'agency_found_location', 'agency_current_location_of_person',
+            'agency_person_condition', 'agency_found_notes'
         ]
         read_only_fields = fields

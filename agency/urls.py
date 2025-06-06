@@ -3,12 +3,17 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import EventViewSet, ExistingAgenciesListView, VolunteerInterestViewSet, AgencyProfileViewSet, AgencyImageDeleteView
 from .views import AgencyPermissionListView, AgencyMemberPermissionManageView
+from .views import CheckVolunteerRequestStatusView
+from .views import EventInterestViewSet 
+from .views import EventInterestedCountView
 
 # Create a router and register the EventViewSet with it
 router = DefaultRouter()
 router.register(r'events', EventViewSet , basename='event')
 router.register(r'volunteer-interests', VolunteerInterestViewSet, basename='volunteer-interest')
 router.register(r'agency-profiles', AgencyProfileViewSet, basename='agencyprofile')
+router.register(r'event-interests', EventInterestViewSet, basename='eventinterest') # <-- Register new ViewSet
+
 
 
 # Define the URL patterns for your agency app
@@ -25,6 +30,12 @@ urlpatterns = [
     path('agency/<int:agency_id>/permissions/<int:member_id>/',
          AgencyMemberPermissionManageView.as_view(),
          name='agency-member-permission-manage'),
+    
+    path('volunteer-interest/check-status/',
+         CheckVolunteerRequestStatusView.as_view(),
+         name='check_volunteer_request_status'),
+    path('events/<int:event_pk>/interested-count/', EventInterestedCountView.as_view(), name='event-interested-count'),
+
 
     path('', include(router.urls)),  # This will route '/events/'
     
