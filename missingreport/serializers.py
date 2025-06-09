@@ -133,3 +133,20 @@ class MissingPersonReportDetailSerializer(serializers.ModelSerializer):
             'agency_person_condition', 'agency_found_notes'
         ]
         read_only_fields = fields
+
+# existing imports...
+
+class ReporterMarkFoundSerializer(serializers.Serializer):
+    """
+    Serializer to validate the reporter_id when a reporter marks a case as found.
+    """
+    reporter_id = serializers.IntegerField(
+        required=True,
+        help_text="The ID of the user who originally reported the missing person."
+    )
+
+    class Meta:
+        # This serializer doesn't have a model, it's just for validating input
+        fields = ['reporter_id']
+
+# ... rest of your serializers

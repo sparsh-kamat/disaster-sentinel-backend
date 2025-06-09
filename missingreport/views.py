@@ -18,7 +18,8 @@ from .serializers import (
     MissingPersonReportListSerializer,
     MissingPersonReportDetailSerializer,
     MissingPersonReportUpdateInfoSerializer, # New
-    AgencyMarkFoundSerializer              # New
+    AgencyMarkFoundSerializer,              # New
+    ReporterMarkFoundSerializer, # For reporter to update additional info
 )
 
 class MissingPersonReportViewSet(viewsets.ModelViewSet):
@@ -105,17 +106,22 @@ class MissingPersonReportViewSet(viewsets.ModelViewSet):
             return Response(MissingPersonReportDetailSerializer(report).data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-    # Custom action for the original reporter to mark as found
+    ## Custom action for the original reporter to mark as found
     @action(detail=True, methods=['post'], url_path='reporter-mark-found')
-    @action_parser_classes([JSONParser]) # <--- ADD THIS DECORATOR
     def reporter_mark_found(self, request, pk=None):
         report = self.get_object()
-        # !!! In a real app, add permission check: if request.user != report.reporter: return 403
         
-        # Expected: reporter_id is sent in request body to verify ownership
-        requesting_user_id = request.data.get('reporter_id')
-        if not requesting_user_id or report.reporter_id != int(requesting_user_id):
-             return Response({'detail': 'Reporter ID mismatch or not provided.'}, status=status.HTTP_403_FORBIDDEN)
+        # Use the new serializer for validation
+        serializer = self.get_serializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        # The data is now validated
+        requesting_user_id = serializer.validated_data['reporter_id']
+
+        # Permission Check (ownership)
+        if report.reporter_id != requesting_user_id:
+            return Response({'detail': 'Reporter ID mismatch. You do not have permission.'}, status=status.HTTP_403_FORBIDDEN)
 
         if report.is_found:
             return Response({'message': 'Person already marked as found.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -123,13 +129,16 @@ class MissingPersonReportViewSet(viewsets.ModelViewSet):
         report.is_found = True
         report.found_date = timezone.now().date()
         report.marked_found_by_type = 'REPORTER'
-        try: # Ensure reporter_user can be fetched.
+        try:
             report.marked_found_by_user = CustomUser.objects.get(pk=requesting_user_id)
         except CustomUser.DoesNotExist:
+            # This case is already handled by the serializer if the user doesn't exist,
+            # but it's good defensive coding.
             return Response({'detail': 'Marking user not found.'}, status=status.HTTP_400_BAD_REQUEST)
 
         report.save()
-        return Response(MissingPersonReportDetailSerializer(report).data)
+        # Return the full detail view of the updated report
+        return Response(MissingPersonReportDetailSerializer(report).data, status=status.HTTP_200_OK)
 
     # Custom action for an agency to mark as found
     @action(detail=True, methods=['post'], url_path='agency-mark-found')
