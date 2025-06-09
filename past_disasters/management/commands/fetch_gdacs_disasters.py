@@ -7,6 +7,7 @@ from unidecode import unidecode
 from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut, GeocoderUnavailable
 from django.utils.timezone import now
+from past_disasters.management.commands.send_email_alerts import send_disaster_email_alert_to_state_users
 
 # GDACS RSS feed URL
 GDACS_FEED_URL = "https://www.gdacs.org/xml/rss.xml"
@@ -162,16 +163,16 @@ def fetch_and_store_gdacs_disasters():
                 print(f"✅ Stored event {eventid} ({title}, State: {state or 'N/A'})")
 
                 if alertlevel.lower() in ("orange", "red"):
-                    send_alert({
-                        "eventid": eventid,
-                        "title": title,
-                        "alertlevel": alertlevel,
-                        "severity": severity,
-                        "population": population,
-                        "state": state,
-                        "latitude": latitude,
-                        "longitude": longitude,
-                        "link": link,
+                    send_disaster_email_alert_to_state_users({
+                    "eventid": eventid,
+                    "title": title,
+                    "alertlevel": alertlevel,
+                    "severity": severity,
+                    "population": population,
+                    "state": state,
+                    "latitude": latitude,
+                    "longitude": longitude,
+                    "link": link,
                     })
 
             except Exception as e:
