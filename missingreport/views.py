@@ -107,7 +107,7 @@ class MissingPersonReportViewSet(viewsets.ModelViewSet):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     ## Custom action for the original reporter to mark as found
-    @action(detail=True, methods=['post'], url_path='reporter-mark-found')
+    @action(detail=True, methods=['post'], url_path='reporter-mark-found', parser_classes=[JSONParser])
     def reporter_mark_found(self, request, pk=None):
         report = self.get_object()
         
