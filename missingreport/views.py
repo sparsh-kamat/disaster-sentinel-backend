@@ -36,6 +36,8 @@ class MissingPersonReportViewSet(viewsets.ModelViewSet):
             return MissingPersonReportUpdateInfoSerializer
         elif self.action == 'agency_mark_found': # For agency marking found
             return AgencyMarkFoundSerializer
+        elif self.action == 'reporter_mark_found': # Add this line
+            return ReporterMarkFoundSerializer
         # Default for retrieve, update, partial_update (if not using custom actions for all updates)
         
         return MissingPersonReportDetailSerializer
