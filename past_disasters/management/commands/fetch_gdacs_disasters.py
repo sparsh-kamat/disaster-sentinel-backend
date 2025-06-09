@@ -28,6 +28,7 @@ EVENT_TYPE_MAP = {
     'MP': 'Mass Movement',
     'SE': 'Severe Weather',
     'WF' : 'Wild Fire',
+    'VO' : 'Volcano',
 }
 
 geolocator = Nominatim(user_agent="gdacs_disaster_app")
