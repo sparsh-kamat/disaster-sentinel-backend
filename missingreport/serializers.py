@@ -138,15 +138,7 @@ class MissingPersonReportDetailSerializer(serializers.ModelSerializer):
 
 class ReporterMarkFoundSerializer(serializers.Serializer):
     """
-    Serializer to validate the reporter_id when a reporter marks a case as found.
+    Validates the 'reporter_id' for the 'reporter-mark-found' action.
+    This is not a ModelSerializer, so it does NOT use a Meta class.
     """
-    reporter_id = serializers.IntegerField(
-        required=True,
-        help_text="The ID of the user who originally reported the missing person."
-    )
-
-    class Meta:
-        # This serializer doesn't have a model, it's just for validating input
-        fields = ['reporter_id']
-
-# ... rest of your serializers
+    reporter_id = serializers.IntegerField(required=True)
