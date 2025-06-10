@@ -9,6 +9,8 @@ from django.utils import timezone # Ensure this is imported
 from django.shortcuts import get_object_or_404
 from django.db import transaction
 from rest_framework.decorators import action
+from django.core.mail import send_mail
+from django.conf import settings
 
 from .models import MissingPersonReport
 from users.models import CustomUser
@@ -139,6 +141,34 @@ class MissingPersonReportViewSet(viewsets.ModelViewSet):
             return Response({'detail': 'Marking user not found.'}, status=status.HTTP_400_BAD_REQUEST)
 
         report.save()
+
+        # Send email notification
+        if report.reporter and report.reporter.email:
+            subject = f"Good News: {report.full_name} has been found"
+            message = (
+                f"Dear {report.reporter.full_name or 'User'},\n\n"
+                f"We are writing to inform you that {report.full_name}, "
+                f"whom you reported missing on {report.created_at.strftime('%Y-%m-%d')}, has been found.\n\n"
+                f"Details:\n"
+                f"- Report ID: {report.id}\n"
+                f"- Missing Person: {report.full_name}\n"
+                f"- Date Found: {report.found_date.strftime('%Y-%m-%d') if report.found_date else 'N/A'}\n\n"
+                f"Thank you for using Disaster Sentinel.\n\n"
+                f"Sincerely,\n"
+                f"The Disaster Sentinel Team"
+            )
+            try:
+                send_mail(
+                    subject,
+                    message,
+                    settings.DEFAULT_FROM_EMAIL,
+                    [report.reporter.email],
+                    fail_silently=False,
+                )
+            except Exception as e:
+                # Log email sending failure, but don't let it break the API response
+                print(f"Error sending 'found person' email to {report.reporter.email}: {e}")
+        
         # Return the full detail view of the updated report
         return Response(MissingPersonReportDetailSerializer(report).data, status=status.HTTP_200_OK)
 
@@ -169,6 +199,37 @@ class MissingPersonReportViewSet(viewsets.ModelViewSet):
             report.agency_person_condition = serializer.validated_data['agency_person_condition']
             report.agency_found_notes = serializer.validated_data.get('agency_found_notes')
             report.save()
+
+            # Send email notification
+            if report.reporter and report.reporter.email:
+                subject = f"Good News: {report.full_name} has been found"
+                message = (
+                    f"Dear {report.reporter.full_name or 'User'},\n\n"
+                    f"We are writing to inform you that {report.full_name}, "
+                    f"whom you reported missing on {report.created_at.strftime('%Y-%m-%d')}, has been found.\n\n"
+                    f"Details:\n"
+                    f"- Report ID: {report.id}\n"
+                    f"- Missing Person: {report.full_name}\n"
+                    f"- Date Found: {report.found_date.strftime('%Y-%m-%d') if report.found_date else 'N/A'}\n"
+                    f"- Found by: Agency\n\n"
+                    f"Thank you for using Disaster Sentinel.\n\n"
+                    f"Sincerely,\n"
+                    f"The Disaster Sentinel Team"
+                )
+                try:
+                    send_mail(
+                        subject,
+                        message,
+                        settings.DEFAULT_FROM_EMAIL,
+                        [report.reporter.email],
+                        fail_silently=False,
+                    )
+                except Exception as e:
+                    # Log email sending failure
+                    print(f"Error sending 'found person' email to {report.reporter.email}: {e}")
+
             return Response(MissingPersonReportDetailSerializer(report).data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    
 
