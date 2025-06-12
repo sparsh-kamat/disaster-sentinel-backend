@@ -147,7 +147,7 @@ class MissingPersonReportViewSet(viewsets.ModelViewSet):
         print(f'this is the object of reporter {report.reporter_id} and this is the email of the reporter {report.reporter.email}')
         print(f'this is the object of reporter {report.reporter} and this is the email of the reporter {report.reporter.email}')
         if report.reporter and report.reporter.email:
-            subject = f"{report.full_name} has been found"
+            subject = f"{report.full_name} has been found" # Consistent subject
             message = (
                 f"Dear {report.reporter.full_name or 'User'},\n\n"
                 f"We are writing to inform you that {report.full_name}, "
@@ -155,7 +155,10 @@ class MissingPersonReportViewSet(viewsets.ModelViewSet):
                 f"Details:\n"
                 f"- Report ID: {report.id}\n"
                 f"- Missing Person: {report.full_name}\n"
-                f"- Date Found: {report.found_date.strftime('%Y-%m-%d') if report.found_date else 'N/A'}\n\n"
+                f"- Date Found: {report.found_date.strftime('%Y-%m-%d') if report.found_date else 'N/A'}\n"
+                f"- Found by: Agency\n"
+                f"- Location Found (as reported by agency): {report.agency_found_location or 'Not specified'}\n" # As added previously
+                f"- Condition of Person (as reported by agency): {report.agency_person_condition or 'Not specified'}\n\n" # Added this line
                 f"Thank you for using Disaster Sentinel.\n\n"
                 f"Sincerely,\n"
                 f"The Disaster Sentinel Team"
@@ -206,7 +209,7 @@ class MissingPersonReportViewSet(viewsets.ModelViewSet):
             # Send email notification
             print(f'this is the object of reporter {report.reporter} and this is the email of the reporter {report.reporter.email}')
             if report.reporter and report.reporter.email:
-                subject = f"{report.full_name} has been found"
+                subject = f"{report.full_name} has been found" # Consistent subject
                 message = (
                     f"Dear {report.reporter.full_name or 'User'},\n\n"
                     f"We are writing to inform you that {report.full_name}, "
@@ -215,7 +218,9 @@ class MissingPersonReportViewSet(viewsets.ModelViewSet):
                     f"- Report ID: {report.id}\n"
                     f"- Missing Person: {report.full_name}\n"
                     f"- Date Found: {report.found_date.strftime('%Y-%m-%d') if report.found_date else 'N/A'}\n"
-                    f"- Found by: Agency\n\n"
+                    f"- Found by: Agency\n"
+                    f"- Location Found (as reported by agency): {report.agency_found_location or 'Not specified'}\n" # As added previously
+                    f"- Condition of Person (as reported by agency): {report.agency_person_condition or 'Not specified'}\n\n" # Added this line
                     f"Thank you for using Disaster Sentinel.\n\n"
                     f"Sincerely,\n"
                     f"The Disaster Sentinel Team"
