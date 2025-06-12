@@ -143,6 +143,7 @@ class MissingPersonReportViewSet(viewsets.ModelViewSet):
         report.save()
 
         # Send email notification
+        print(f'this is the object of reporter {report.reporter} and this is the email of the reporter {report.reporter.email}')
         if report.reporter and report.reporter.email:
             subject = f"Good News: {report.full_name} has been found"
             message = (
@@ -201,6 +202,7 @@ class MissingPersonReportViewSet(viewsets.ModelViewSet):
             report.save()
 
             # Send email notification
+            print(f'this is the object of reporter {report.reporter} and this is the email of the reporter {report.reporter.email}')
             if report.reporter and report.reporter.email:
                 subject = f"Good News: {report.full_name} has been found"
                 message = (
