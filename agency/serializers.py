@@ -415,6 +415,26 @@ class EventInterestSerializer(serializers.ModelSerializer):
             event=event_instance,
             defaults={'interested': interested_status}
         )
+        if created and interested_status and user_instance.email:
+            from django.core.mail import send_mail
+            subject = f"Registration Confirmed: {event_instance.name}"
+            message = (
+                f"Dear {user_instance.full_name or user_instance.email},\n\n"
+                f"You have successfully registered for the event: {event_instance.name}.\n"
+                f"Date: {event_instance.date}\n"
+                f"Time: {event_instance.start_time}\n"
+                f"Venue: {event_instance.venue_name or event_instance.platform or 'TBA'}\n\n"
+                f"Thank you for your interest!\n"
+                f"Best regards,\n"
+                f"Disaster Sentinel Team"
+            )
+            send_mail(
+                subject,
+                message,
+                None,  # Use default from settings
+                [user_instance.email],
+                fail_silently=True,
+            )
         return interest_obj
 
     def update(self, instance, validated_data):
